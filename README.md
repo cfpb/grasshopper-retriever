@@ -4,13 +4,17 @@ Fetches public address data for use by the [grasshopper-loader](https://github.c
 
 ## Dependencies
  - [node](https://nodejs.org/) 
- - [Docker](https://www.docker.com/) *Optional* 
+ - [Docker](https://www.docker.com/)
+   - Optional, removes need for preinstalled node
 
 ## Installation
  - Clone the repo
+
+#### Basic installation
  - `npm install`
- - Optional Docker installation
-   - `docker build --rm --tag=hmda/grasshopper-retriever .`
+
+####  Docker installation 
+ - `docker build --rm --tag=hmda/grasshopper-retriever .`
 
 ## Usage
 TODO
