@@ -27,6 +27,7 @@
     "aws-sdk": "^2.1.31",
     "csv-to-vrt": "0.0.2",
     "hyperquest": "^1.2.0",
+    "s3-upload-stream": "^1.0.7",
     "unzip": "^0.1.11"
   },
   "devDependencies": {

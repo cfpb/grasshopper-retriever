@@ -2,6 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var spawn = require('child_process').spawn;
 var hyperquest = require('hyperquest');
+var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
 var uploadStream = require('./lib/uploadStream');
@@ -43,13 +44,18 @@ function run(program, callback){
               handleStream(spawnOgr(vrt), record);
             });
           }else{
-            handleStream(spawnOgr(unzipped), record);
+            handleStream(spawnOgr(unzipped), record, report);
           }
         });
     }else{
-      handleStream(spawnOgr(null, request), record)
+      handleStream(spawnOgr(null, request), record, report)
     }
   });
+
+
+  function report(err, details){
+    console.log(err, details);
+  }
 
 
   function spawnOgr(file, stream){
@@ -67,13 +73,16 @@ function run(program, callback){
   function handleStream(stream, record, cb){
     if(!cb) cb = function(){};
 
-    var endfile = path.join(program.directory, record.name + '.csv');
+    var endfile = path.join(program.directory, record.name + '.csv.gz');
+    var zipStream = zlib.createGzip();
+
+    stream.pipe(zipStream);
 
     if(program.bucket){
-      return uploadStream.stream(stream, endfile, cb);
+      return uploadStream.stream(zipStream, endfile, cb);
     }
 
-    stream.pipe(fs.createWriteStream(endfile))
+    zipStream.pipe(fs.createWriteStream(endfile))
       .on('finish', cb);
   }
 
