@@ -36,6 +36,10 @@ function run(program, callback){
     //Don't allow to traverse to other folders via data.json
     var name = record.name = record.name.replace(restrictedReg,'');
     var request = hyperquest(record.url);
+    
+    request.on('error', function(err){
+      console.log('Error requesting %s.\n', record.url, err);
+    })
 
     if(zipReg.test(record.url)){
       request.pipe(unzip.Extract({path: name}))
