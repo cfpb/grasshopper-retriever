@@ -2,10 +2,12 @@ var fs = require('fs');
 var path = require('path');
 var spawn = require('child_process').spawn;
 var hyperquest = require('hyperquest');
+var rimraf = require('rimraf');
 var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
 var uploadStream = require('./lib/uploadStream');
+var checkHash = require('./lib/checkHash');
 
 var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
@@ -39,12 +41,18 @@ function run(program, callback){
       request.pipe(unzip.Extract({path: name}))
         .on('close', function(){
           var unzipped = path.join(name, record.file)
+
+          function removeZipped(err, details){
+            if(err) console.error(err);
+            rimraf(unzipped);
+          }
+
           if(csvReg.test(record.file)){
             csvToVrt(unzipped, record.sourceSrs, function(vrt){
-              handleStream(spawnOgr(vrt), record);
+              handleStream(spawnOgr(vrt), record, removeZipped);
             });
           }else{
-            handleStream(spawnOgr(unzipped), record, report);
+            handleStream(spawnOgr(unzipped), record, removeZipped);
           }
         });
     }else{
@@ -75,7 +83,12 @@ function run(program, callback){
 
     var endfile = path.join(program.directory, record.name + '.csv.gz');
     var zipStream = zlib.createGzip();
-
+    
+    checkHash(stream, record.hash, function(hashIsEqual){
+      if(hashIsEqual) return; 
+      stream.unpipe(zipStream);
+      throw new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.');
+    });
     stream.pipe(zipStream);
 
     if(program.bucket){
@@ -85,5 +98,6 @@ function run(program, callback){
     zipStream.pipe(fs.createWriteStream(endfile))
       .on('finish', cb);
   }
+
 
 }
