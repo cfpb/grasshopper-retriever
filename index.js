@@ -39,7 +39,15 @@ function run(program, callback){
     
     request.on('error', function(err){
       console.log('Error requesting %s.\n', record.url, err);
+      if(callback) return callback(err);
+      throw err;
     })
+
+    checkHash(request, record.hash, function(hashIsEqual, remoteHash){
+      if(hashIsEqual) return; 
+      request.unpipe();
+      request.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
+    });
 
     if(zipReg.test(record.url)){
       request.pipe(unzip.Extract({path: name}))
@@ -47,8 +55,10 @@ function run(program, callback){
           var unzipped = path.join(name, record.file)
 
           function removeZipped(err, details){
-            if(err) console.error(err);
-            rimraf(unzipped);
+            rimraf(name, function(e){
+              if(e) throw e;
+              if(err) throw err;
+            });
           }
 
           if(csvReg.test(record.file)){
@@ -83,16 +93,16 @@ function run(program, callback){
 
 
   function handleStream(stream, record, cb){
-    if(!cb) cb = function(){};
+    if(!cb) cb = function(err){if(err) throw err;};
 
     var endfile = path.join(program.directory, record.name + '.csv.gz');
     var zipStream = zlib.createGzip();
     
-    checkHash(stream, record.hash, function(hashIsEqual){
-      if(hashIsEqual) return; 
-      stream.unpipe(zipStream);
-      throw new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.');
-    });
+    stream.on('error', function(err){
+      this.unpipe();
+      cb(err);
+    })
+
     stream.pipe(zipStream);
 
     if(program.bucket){
@@ -100,7 +110,11 @@ function run(program, callback){
     }
 
     zipStream.pipe(fs.createWriteStream(endfile))
-      .on('finish', cb);
+      .on('finish', cb)
+      .on('error', function(err){
+        this.unpipe();
+        cb(err); 
+      })
   }
 
 
