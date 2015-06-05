@@ -23,18 +23,28 @@ if(require.main === module){
     .option('-p, --profile <profile>', 'The aws profile in ~/.aws/credentials. Will also respect environmental variables.', 'default')
     .option('-d, --directory <directory>', 'A directory where the data should be loaded, either relative to the current folder or the passed S3 bucket.', '.')
     .option('-f --file <file>', 'The json data file that contains the collected data endpoints. Defaults to data.json.', 'data.json')
+    .option('-m --match <match>', 'A string or regular expression that the names from the <file> must contain or match', null)
     .parse(process.argv)
   run(program);
 }
 
 function run(program, callback){
   var data = JSON.parse(fs.readFileSync(program.file));
+  var stringMatch = typeof program.match === 'string';
+  var regMatch = typeof program.match === 'object';
 
   if(program.bucket) uploadStream.init(program.bucket, program.profile) 
 
   data.forEach(function(record){
+
     //Don't allow to traverse to other folders via data.json
-    var name = record.name = record.name.replace(restrictedReg,'');
+    if(restrictedReg.test(record.name)){
+      throw new Error('Invalid record name. Must not contain ".." or "/".');
+    }
+
+    if(stringMatch && record.name.indexOf(program.match) === -1) return; 
+    else if(regMatch && !program.match.test(record.name)) return; 
+
     var request = hyperquest(record.url);
     
     request.on('error', function(err){
