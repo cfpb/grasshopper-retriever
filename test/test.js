@@ -23,5 +23,17 @@ test('checkHash module',function(t){
 });
 
 test('uploadStream module',function(t){
-  t.end();
+  t.plan(3);
+
+  var S3 = uploadStream.init('wyatt-test', 'default')
+  var S3Copy = uploadStream.init('wyatt-test');
+
+  t.equal(typeof S3, 'object', 'Creates and returns an S3 instance.');
+  t.equal(S3, S3Copy, 'Multiple calls to init return the same S3 instance.');
+
+  try{
+    uploadStream.init();
+  }catch(e){
+    t.pass('Errors without a bucket passed in.');
+  }
 });
