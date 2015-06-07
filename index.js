@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+
+'use strict';
 var fs = require('fs');
 var path = require('path');
 var spawn = require('child_process').spawn;
@@ -29,9 +32,24 @@ if(require.main === module){
 }
 
 function run(program, callback){
-  var data = JSON.parse(fs.readFileSync(program.file));
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
+
+  var data = JSON.parse(fs.readFileSync(program.file));
+  var recordCount = data.length;
+  var processed = 0;
+
+  function recordCallback(err){
+    if(err){
+     if(callback) return callback(err); 
+     throw err;
+    }
+
+    if(++processed === recordCount){
+      callback(null, recordCount);
+    }
+  }
+
 
   if(program.bucket) uploadStream.init(program.bucket, program.profile) 
 
@@ -42,16 +60,16 @@ function run(program, callback){
       throw new Error('Invalid record name. Must not contain ".." or "/".');
     }
 
-    if(stringMatch && record.name.indexOf(program.match) === -1) return; 
-    else if(regMatch && !program.match.test(record.name)) return; 
+    //If the record is filtered, remove it from the count 
+    if(stringMatch && record.name.indexOf(program.match) === -1 ||
+       regMatch && !program.match.test(record.name)
+    ){
+       return --recordCount;
+    }
 
     var request = hyperquest(record.url);
     
-    request.on('error', function(err){
-      console.log('Error requesting %s.\n', record.url, err);
-      if(callback) return callback(err);
-      throw err;
-    })
+    request.on('error', recordCallback);
 
     checkHash(request, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual) return; 
@@ -60,14 +78,13 @@ function run(program, callback){
     });
 
     if(zipReg.test(record.url)){
-      request.pipe(unzip.Extract({path: name}))
+      request.pipe(unzip.Extract({path: record.name}))
         .on('close', function(){
-          var unzipped = path.join(name, record.file)
+          var unzipped = path.join(record.name, record.file)
 
           function removeZipped(err, details){
-            rimraf(name, function(e){
-              if(e) throw e;
-              if(err) throw err;
+            rimraf(record.name, function(e){
+              recordCallback(e || err);
             });
           }
 
