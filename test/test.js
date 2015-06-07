@@ -37,3 +37,37 @@ test('uploadStream module',function(t){
     t.pass('Errors without a bucket passed in.');
   }
 });
+
+test('retriever', function(t){
+  t.plan(15);
+
+  try{
+    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'nofile'}); 
+  }catch(e){
+    t.pass('Errors on bad file.');
+  }
+
+  try{
+    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'parent_dir.json'}); 
+  }catch(e){
+    t.pass('Errors on parent dir in record name.');
+  }
+
+  try{
+    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'slash.json'}); 
+  }catch(e){
+    t.pass('Errors on forward slash in record name.');
+  }
+
+  try{
+    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:''}); 
+  }catch(e){
+    t.pass('Errors on bad file.');
+  }
+
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
+
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
+
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
+});
