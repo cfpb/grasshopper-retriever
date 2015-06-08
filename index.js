@@ -1,6 +1,3 @@
-#!/usr/bin/env node
-
-'use strict';
 var fs = require('fs');
 var path = require('path');
 var spawn = require('child_process').spawn;
@@ -16,22 +13,8 @@ var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
 var restrictedReg = /\.\.|\//g;
 
-var program;
 
-if(require.main === module){
-  program = require('commander');
-  program
-    .version('0.0.1')
-    .option('-b, --bucket <bucket>', 'An S3 bucket where the data should be loaded.')
-    .option('-p, --profile <profile>', 'The aws profile in ~/.aws/credentials. Will also respect environmental variables.', 'default')
-    .option('-d, --directory <directory>', 'A directory where the data should be loaded, either relative to the current folder or the passed S3 bucket.', '.')
-    .option('-f --file <file>', 'The json data file that contains the collected data endpoints. Defaults to data.json.', 'data.json')
-    .option('-m --match <match>', 'A string or regular expression that the names from the <file> must contain or match', null)
-    .parse(process.argv)
-  run(program);
-}
-
-function run(program, callback){
+function retrieve(program, callback){
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
 
@@ -146,3 +129,5 @@ function run(program, callback){
 
 
 }
+
+module.exports = retrieve;

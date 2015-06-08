@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node test/test.js"
   },
+  "bin": {"grasshoppper-retriever": "retriever.js"},
   "repository": {
     "type": "git",
     "url": "https://github.com/cfpb/grasshopper-retriever.git"
