@@ -1,8 +1,7 @@
-var fs = require('fs');
+var fs = require('fs-extra');
 var path = require('path');
 var spawn = require('child_process').spawn;
 var hyperquest = require('hyperquest');
-var rimraf = require('rimraf');
 var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
@@ -15,6 +14,19 @@ var restrictedReg = /\.\.|\//g;
 
 
 function retrieve(program, callback){
+
+  var wrappedCb = function(){
+    var args = arguments;
+    var self = this;
+    fs.emptyDir('scratch', function(err){
+      if(err){
+       if(callback) return callback(err);
+       throw err;
+      }
+      if(callback) callback.apply(self, args);
+    });
+  };
+
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
   
@@ -26,14 +38,8 @@ function retrieve(program, callback){
 
 
   function recordCallback(err){
-    if(err){
-     if(callback) return callback(err); 
-     throw err;
-    }
-
-    if(++processed === recordCount){
-      if(callback) callback(null, recordCount);
-    }
+    if(err) wrappedCb(err);
+    if(++processed === recordCount) wrappedCb(null, recordCount);
   }
 
 
@@ -52,7 +58,7 @@ function retrieve(program, callback){
        regMatch && !program.match.test(record.name)
     ){
        if(--recordCount === processed){
-         return callback(null, recordCount);
+         return wrappedCb(null, recordCount);
        }
        return recordCount;
     }
@@ -68,26 +74,33 @@ function retrieve(program, callback){
     });
 
     if(zipReg.test(record.url)){
-      request.pipe(unzip.Extract({path: record.name}))
+      request.pipe(unzip.Extract({path: path.join('scratch', record.name)}))
         .on('close', function(){
-          var unzipped = path.join(record.name, record.file)
-
-          function removeZipped(err, details){
-            rimraf(record.name, function(e){
-              recordCallback(e || err);
-            });
-          }
+          var unzipped = path.join('scratch', record.name, record.file)
 
           if(csvReg.test(record.file)){
-            csvToVrt(unzipped, record.sourceSrs, function(vrt){
-              handleStream(spawnOgr(vrt), record, removeZipped);
+            csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
+              handleStream(spawnOgr(vrt), record, recordCallback);
             });
           }else{
-            handleStream(spawnOgr(unzipped), record, removeZipped);
+            handleStream(spawnOgr(unzipped), record, recordCallback);
           }
         });
     }else{
-      handleStream(spawnOgr(null, request), record, recordCallback)
+      if(csvReg.test(record.file)){
+        var csv = path.join('scratch', record.file);
+        fs.writeFile(csv, request, function(err){
+          if(err) return recordCallback(err);
+
+          csvToVrt(csv, record.sourceSrs, function(err, vrt){
+            if(err) return recordCallback(err);
+
+            handleStream(spawnOgr(vrt), record, recordCallback);
+          });
+        });
+      }else{
+        handleStream(spawnOgr(null, request), record, recordCallback);
+      }
     }
   });
 

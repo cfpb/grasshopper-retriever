@@ -116,4 +116,8 @@ test('retriever', function(t){
     t.notOk(err, 'No error with no match.');
     t.equal(count, 0, 'Loads nothing when no data matched.');
   });
+
+      //unzipped json endpoint
+      //csv endpoint
+      //zipped csv endpoint
 });
