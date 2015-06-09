@@ -12,12 +12,13 @@ var checkHash = require('./lib/checkHash');
 var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
 var restrictedReg = /\.\.|\//g;
-var uploadStream;
 
 
 function retrieve(program, callback){
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
+  
+  var uploadStream;
 
   var data = JSON.parse(fs.readFileSync(program.file));
   var recordCount = data.length;
@@ -31,7 +32,7 @@ function retrieve(program, callback){
     }
 
     if(++processed === recordCount){
-      callback(null, recordCount);
+      if(callback) callback(null, recordCount);
     }
   }
 
@@ -83,14 +84,9 @@ function retrieve(program, callback){
           }
         });
     }else{
-      handleStream(spawnOgr(null, request), record, report)
+      handleStream(spawnOgr(null, request), record, recordCallback)
     }
   });
-
-
-  function report(err, details){
-    console.log(err, details);
-  }
 
 
   function spawnOgr(file, stream){
