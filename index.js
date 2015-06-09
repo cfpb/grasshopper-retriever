@@ -6,12 +6,13 @@ var rimraf = require('rimraf');
 var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
-var uploadStream = require('./lib/uploadStream');
+var UploadStream = require('./lib/UploadStream');
 var checkHash = require('./lib/checkHash');
 
 var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
 var restrictedReg = /\.\.|\//g;
+var uploadStream;
 
 
 function retrieve(program, callback){
@@ -21,6 +22,7 @@ function retrieve(program, callback){
   var data = JSON.parse(fs.readFileSync(program.file));
   var recordCount = data.length;
   var processed = 0;
+
 
   function recordCallback(err){
     if(err){
@@ -34,7 +36,8 @@ function retrieve(program, callback){
   }
 
 
-  if(program.bucket) uploadStream.init(program.bucket, program.profile) 
+  if(program.bucket) uploadStream = UploadStream(program.bucket, program.profile) 
+
 
   data.forEach(function(record){
 
