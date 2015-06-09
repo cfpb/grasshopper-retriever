@@ -12,20 +12,27 @@ var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
 var restrictedReg = /\.\.|\//g;
 
+var scratchSpace = 'retriever-scratch' + Date.now();
+
 
 function retrieve(program, callback){
 
-  var wrappedCb = function(){
+  //fs.mkdirSync(scratchSpace)
+
+  function wrappedCb(){
     var args = arguments;
     var self = this;
-    fs.emptyDir('scratch', function(err){
+
+    fs.remove(scratchSpace, function(err){
       if(err){
        if(callback) return callback(err);
        throw err;
       }
+
       if(callback) callback.apply(self, args);
     });
-  };
+  }
+
 
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
@@ -38,7 +45,7 @@ function retrieve(program, callback){
 
 
   function recordCallback(err){
-    if(err) wrappedCb(err);
+    if(err) return wrappedCb(err);
     if(++processed === recordCount) wrappedCb(null, recordCount);
   }
 
@@ -74,9 +81,9 @@ function retrieve(program, callback){
     });
 
     if(zipReg.test(record.url)){
-      request.pipe(unzip.Extract({path: path.join('scratch', record.name)}))
+      request.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
         .on('close', function(){
-          var unzipped = path.join('scratch', record.name, record.file)
+          var unzipped = path.join(scratchSpace, record.name, record.file)
 
           if(csvReg.test(record.file)){
             csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
@@ -88,7 +95,7 @@ function retrieve(program, callback){
         });
     }else{
       if(csvReg.test(record.file)){
-        var csv = path.join('scratch', record.file);
+        var csv = path.join(scratchSpace, record.file);
         fs.writeFile(csv, request, function(err){
           if(err) return recordCallback(err);
 
