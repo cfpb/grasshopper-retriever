@@ -51,7 +51,10 @@ function retrieve(program, callback){
     if(stringMatch && record.name.indexOf(program.match) === -1 ||
        regMatch && !program.match.test(record.name)
     ){
-       return --recordCount;
+       if(--recordCount === processed){
+         return callback(null, recordCount);
+       }
+       return recordCount;
     }
 
     var request = hyperquest(record.url);

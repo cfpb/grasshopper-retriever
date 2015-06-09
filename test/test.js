@@ -51,7 +51,7 @@ test('uploadStream module',function(t){
 });
 
 test('retriever', function(t){
-  t.plan(11);
+  t.plan(16);
 
   try{
     retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'nofile'}); 
@@ -74,7 +74,13 @@ test('retriever', function(t){
   try{
     retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:''}); 
   }catch(e){
-    t.pass('Errors on bad file.');
+    t.pass('Errors on bad file and good bucket.');
+  }
+
+  try{
+    retriever({profile:'default', directory:'.', file:''});
+  }catch(e){
+    t.pass('Errors on bad file and no bucket.');
   }
 
   retriever({bucket:'wyatt-test', profile:'default', directory:'.', file: maine}, function(err, count){
@@ -100,6 +106,14 @@ test('retriever', function(t){
     t.notOk(err, 'No error on good file.');
     t.equal(count, 1, 'Loads data from test data locally.')
   }); 
-
   
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file: maine, match: 'maine'}, function(err, count){
+    t.notOk(err, 'No error with match.');
+    t.equal(count, 1, 'Loads matched data.');
+  });
+
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file: maine, match: 'nomatch'}, function(err, count){
+    t.notOk(err, 'No error with no match.');
+    t.equal(count, 0, 'Loads nothing when no data matched.');
+  });
 });
