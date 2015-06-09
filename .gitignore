@@ -72,4 +72,4 @@ src/vendor/
 dist/
 
 # Project #
-test/output/
+test/output/*

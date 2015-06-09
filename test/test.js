@@ -1,6 +1,6 @@
 var test = require('tape');
 var fs = require('fs');
-
+var spawn = require('child_process').spawn;
 var retriever = require('../index');
 var checkHash = require('../lib/checkHash');
 var UploadStream = require('../lib/UploadStream');
@@ -51,7 +51,7 @@ test('uploadStream module',function(t){
 });
 
 test('retriever', function(t){
-  t.plan(6);
+  t.plan(11);
 
   try{
     retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'nofile'}); 
@@ -79,9 +79,27 @@ test('retriever', function(t){
 
   retriever({bucket:'wyatt-test', profile:'default', directory:'.', file: maine}, function(err, count){
     t.notOk(err, 'No error on good file and bucket.');
-    t.equal(count, 1, 'Loads data from the test dataset.');
+    t.equal(count, 1, 'Loads data from the test dataset to bucket.');
   });
-//retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
 
- // retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
+  retriever({bucket:'fakebucketskjhqblwjdqwobdjabmznmbxbcbcnnbmcioqwOws', profile:'default', directory:'.', file: maine}, function(err, count){
+    t.ok(err, 'Error on no bucket.');
+  });
+
+  spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', 'test/data/maine.json']) 
+    .on('exit', function(code){
+      t.equal(code, 0, 'Loads via cli');
+    });
+
+  spawn('test/no-cb.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', 'test/data/maine.json']) 
+    .on('exit', function(code){
+      t.equal(code, 0, 'Works without a callback.');
+    });
+  
+  retriever({profile:'default', directory:'test/output', file:'test/data/maine.json'}, function(err, count){
+    t.notOk(err, 'No error on good file.');
+    t.equal(count, 1, 'Loads data from test data locally.')
+  }); 
+
+  
 });
