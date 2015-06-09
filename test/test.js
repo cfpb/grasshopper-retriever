@@ -11,7 +11,7 @@ var maine = 'test/data/maine.json';
 test('checkHash module',function(t){
   t.plan(3);
   var stream = fs.createReadStream(maine);
-  var hash = '9c8b3eb529b62bc3e96fb021970e0cd785df37536cf0f5f626d4552f60bc14c7';
+  var hash = 'f0a85b3c64f19900c47f168ea97363943ee7d83b1a3d20cc79801865046cef4d';
   
   checkHash(stream, hash, function(hashIsEqual, computedHash){
     t.ok(hashIsEqual, 'Computes proper hash'); 
@@ -49,9 +49,9 @@ test('uploadStream module',function(t){
   });
 
 });
-/*
+
 test('retriever', function(t){
-  t.plan(15);
+  t.plan(6);
 
   try{
     retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'nofile'}); 
@@ -77,10 +77,11 @@ test('retriever', function(t){
     t.pass('Errors on bad file.');
   }
 
-  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
-// t.pass('Skips
-
-//  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file: maine}, function(err, count){
+    t.notOk(err, 'No error on good file and bucket.');
+    t.equal(count, 1, 'Loads data from the test dataset.');
+  });
+//retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
 
  // retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/maine.json'}); 
-});*/
+});
