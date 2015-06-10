@@ -74,3 +74,4 @@ dist/
 # Project #
 test/output/
 !maine.zip
+!maine.csv.zip
