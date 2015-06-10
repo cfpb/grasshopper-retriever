@@ -115,7 +115,7 @@ function retrieve(program, callback){
   function spawnOgr(file, stream){
     var child; 
     if(stream){
-      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', -'lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/'])
+      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/'])
       stream.pipe(child.stdin);
     }else{
       child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', file])

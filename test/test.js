@@ -92,17 +92,17 @@ test('retriever', function(t){
     t.ok(err, 'Error on no bucket.');
   });
 
-  spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', 'test/data/maine.json']) 
+  spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', maine]) 
     .on('exit', function(code){
       t.equal(code, 0, 'Loads via cli');
     });
 
-  spawn('test/no-cb.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', 'test/data/maine.json']) 
+  spawn('test/no-cb.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', maine]) 
     .on('exit', function(code){
       t.equal(code, 0, 'Works without a callback.');
     });
   
-  retriever({profile:'default', directory:'test/output', file:'test/data/maine.json'}, function(err, count){
+  retriever({profile:'default', directory:'test/output', file:maine}, function(err, count){
     t.notOk(err, 'No error on good file.');
     t.equal(count, 1, 'Loads data from test data locally.')
   }); 
@@ -117,7 +117,18 @@ test('retriever', function(t){
     t.equal(count, 0, 'Loads nothing when no data matched.');
   });
 
-      //unzipped json endpoint
-      //csv endpoint
-      //zipped csv endpoint
+  retriever({profile:'default', directory:'test/output', file: 'test/data/mainejson.json'}, function(err, count){
+    t.notOk(err, 'No error on good file.');
+    t.equal(count, 1, 'Loads data from test data locally.')
+  });
+
+  retriever({profile:'default', directory:'test/output', file: 'test/data/mainecsv.json'}, function(err, count){
+    t.notOk(err, 'No error on good file.');
+    t.equal(count, 1, 'Loads data from test data locally.')
+  });
+
+  retriever({profile:'default', directory:'test/output', file: 'test/data/mainezipcsv.json'}, function(err, count){
+    t.notOk(err, 'No error on good file.');
+    t.equal(count, 1, 'Loads data from test data locally.')
+  });
 });
