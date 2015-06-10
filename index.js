@@ -12,12 +12,11 @@ var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
 var restrictedReg = /\.\.|\//g;
 
-var scratchSpace = 'retriever-scratch' + Date.now();
-
 
 function retrieve(program, callback){
 
-  //fs.mkdirSync(scratchSpace)
+  var scratchSpace = 'retriever-scratch' + Math.random()*1e17;
+  fs.mkdirSync(scratchSpace);
 
   function wrappedCb(){
     var args = arguments;
@@ -96,7 +95,9 @@ function retrieve(program, callback){
     }else{
       if(csvReg.test(record.file)){
         var csv = path.join(scratchSpace, record.file);
-        fs.writeFile(csv, request, function(err){
+        var csvStream = fs.createWriteStream(csv);
+
+        csvStream.on('finish', function(err){
           if(err) return recordCallback(err);
 
           csvToVrt(csv, record.sourceSrs, function(err, vrt){
@@ -105,6 +106,8 @@ function retrieve(program, callback){
             handleStream(spawnOgr(vrt), record, recordCallback);
           });
         });
+
+        request.pipe(csvStream);
       }else{
         handleStream(spawnOgr(null, request), record, recordCallback);
       }

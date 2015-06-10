@@ -51,7 +51,7 @@ test('uploadStream module',function(t){
 });
 
 test('retriever', function(t){
-  t.plan(16);
+  t.plan(22);
 
   try{
     retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'nofile'}); 
@@ -118,17 +118,17 @@ test('retriever', function(t){
   });
 
   retriever({profile:'default', directory:'test/output', file: 'test/data/mainejson.json'}, function(err, count){
-    t.notOk(err, 'No error on good file.');
-    t.equal(count, 1, 'Loads data from test data locally.')
+    t.notOk(err, 'No error on good json file.');
+    t.equal(count, 1, 'Loads data from json file.')
   });
 
   retriever({profile:'default', directory:'test/output', file: 'test/data/mainecsv.json'}, function(err, count){
-    t.notOk(err, 'No error on good file.');
-    t.equal(count, 1, 'Loads data from test data locally.')
+    t.notOk(err, 'No error on csv.');
+    t.equal(count, 1, 'Loads data from csv.')
   });
 
   retriever({profile:'default', directory:'test/output', file: 'test/data/mainezipcsv.json'}, function(err, count){
-    t.notOk(err, 'No error on good file.');
-    t.equal(count, 1, 'Loads data from test data locally.')
+    t.notOk(err, 'No error on zipped csv.');
+    t.equal(count, 1, 'Loads data from zipped csv.')
   });
 });
