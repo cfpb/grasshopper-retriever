@@ -10,7 +10,7 @@ var checkHash = require('./lib/checkHash');
 
 var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
-var restrictedReg = /\.\.|\//g;
+var restrictedReg = /\.\.|\//;
 
 
 function retrieve(program, callback){
@@ -18,14 +18,15 @@ function retrieve(program, callback){
   var scratchSpace = 'retriever-scratch' + Math.random()*1e17;
   fs.mkdirSync(scratchSpace);
 
-  function wrappedCb(){
+
+  function wrappedCb(err, count){
     var args = arguments;
     var self = this;
 
-    fs.remove(scratchSpace, function(err){
-      if(err){
-       if(callback) return callback(err);
-       throw err;
+    fs.remove(scratchSpace, function(e){
+      if(err||e){
+       if(callback) return callback(err||e);
+       throw err||e;
       }
 
       if(callback) callback.apply(self, args);
@@ -35,10 +36,18 @@ function retrieve(program, callback){
 
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
+  var restrictedFound = 0;
   
   var uploadStream;
 
-  var data = JSON.parse(fs.readFileSync(program.file));
+  var data;
+
+  try{
+    data = JSON.parse(fs.readFileSync(program.file));
+  }catch(err){
+    return wrappedCb(err);
+  }
+
   var recordCount = data.length;
   var processed = 0;
 
@@ -56,8 +65,11 @@ function retrieve(program, callback){
 
     //Don't allow to traverse to other folders via data.json
     if(restrictedReg.test(record.name)){
-      throw new Error('Invalid record name. Must not contain ".." or "/".');
+      restrictedFound = 1;
+      return wrappedCb(new Error('Invalid record name. Must not contain ".." or "/".'));
     }
+
+    if(restrictedFound) return;
 
     //If the record is filtered, remove it from the count 
     if(stringMatch && record.name.indexOf(program.match) === -1 ||
@@ -128,7 +140,7 @@ function retrieve(program, callback){
 
 
   function handleStream(stream, record, cb){
-    if(!cb) cb = function(err){if(err) throw err;};
+    if(!cb) cb = function(err){if(err) wrappedCb(err);};
 
     var endfile = path.join(program.directory, record.name + '.csv.gz');
     var zipStream = zlib.createGzip();

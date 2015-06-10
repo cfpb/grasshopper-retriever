@@ -51,37 +51,23 @@ test('uploadStream module',function(t){
 });
 
 test('retriever', function(t){
-  t.plan(22);
+  t.plan(21);
 
-  try{
-    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'nofile'}); 
-  }catch(e){
-    t.pass('Errors on bad file.');
-  }
+  retriever({profile:'default', directory:'.', file:'nofile'}, function(err){
+    if(err) t.pass('Errors on bad file and no bucket.');
+  });
 
-  try{
-    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'parent_dir.json'}); 
-  }catch(e){
-    t.pass('Errors on parent dir in record name.');
-  }
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'nofile'}, function(err){
+    if(err) t.pass('Errors on bad file and good bucket.');
+  });
 
-  try{
-    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'slash.json'}); 
-  }catch(e){
-    t.pass('Errors on forward slash in record name.');
-  }
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/parent_dir.json'}, function(err){
+    if(err) t.pass('Errors on parent dir in record name.');
+  });
 
-  try{
-    retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:''}); 
-  }catch(e){
-    t.pass('Errors on bad file and good bucket.');
-  }
-
-  try{
-    retriever({profile:'default', directory:'.', file:''});
-  }catch(e){
-    t.pass('Errors on bad file and no bucket.');
-  }
+  retriever({bucket:'wyatt-test', profile:'default', directory:'.', file:'test/data/slash.json'}, function(err){
+    if(err) t.pass('Errors on forward slash in record name.');
+  });
 
   retriever({bucket:'wyatt-test', profile:'default', directory:'.', file: maine}, function(err, count){
     t.notOk(err, 'No error on good file and bucket.');
@@ -89,7 +75,7 @@ test('retriever', function(t){
   });
 
   retriever({bucket:'fakebucketskjhqblwjdqwobdjabmznmbxbcbcnnbmcioqwOws', profile:'default', directory:'.', file: maine}, function(err, count){
-    t.ok(err, 'Error on no bucket.');
+    t.ok(err, 'Error on bad bucket.');
   });
 
   spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', maine]) 
