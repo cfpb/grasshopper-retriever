@@ -1,12 +1,20 @@
-FROM node:0.12
-MAINTAINER Wyatt Pearsall <wyatt.pearsall@cfpb.gov>
+# Docker image for grasshopper-retriever
+# Build with docker build -t hmda/retriever:0.1 .
+# Run by calling ./docker-run.sh <image>
 
-RUN mkdir -p /usr/src/app
+FROM geodata/gdal:1.11.2
+MAINTAINER Wyatt Pearsall <wyatt.pearsall@cfpb.gov>
+USER root
+
+RUN apt-get update && apt-get install -y curl && \
+    curl -sL https://deb.nodesource.com/setup_0.12 | sudo bash - && \
+    apt-get install -y nodejs && \
+    mkdir -p /usr/src/app
+
 WORKDIR /usr/src/app
+COPY . /usr/src/app
 
 RUN useradd notroot && chown -R notroot /usr/src/app && chmod u+rwx /usr/src/app
-
-COPY . /usr/src/app
 RUN npm install
 
 USER notroot
