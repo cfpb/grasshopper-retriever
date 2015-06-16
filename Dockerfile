@@ -1,6 +1,8 @@
 # Docker image for grasshopper-retriever
+# Need to set AWS environment variables if fetching to a bucket
 # Build with docker build -t hmda/retriever:0.1 .
-# Run by calling ./docker-run.sh <image>
+# Run by calling ./docker-run.sh <image> <retriever args>
+# Test by calling ./docker-test.sh <image>
 
 FROM geodata/gdal:1.11.2
 MAINTAINER Wyatt Pearsall <wyatt.pearsall@cfpb.gov>
