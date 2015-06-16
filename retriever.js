@@ -16,7 +16,6 @@ program
 
 retriever(program, function(err, retrieved){
   if(err) throw err;
-
   console.log('Fetched %d source%s and placed %s in %s%s.',
     retrieved,
     retrieved === 1 ? '' : 's',

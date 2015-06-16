@@ -20,7 +20,7 @@
     "AWS"
   ],
   "author": "Wyatt Pearsall <wyatt.pearsall@cfpb.gov>",
-  "license": "CC0",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/cfpb/grasshopper-retriever/issues"
   },
