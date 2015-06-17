@@ -1,5 +1,6 @@
 var test = require('tape');
 var fs = require('fs');
+var pump = require('pump');
 var spawn = require('child_process').spawn;
 var retriever = require('../index');
 var checkHash = require('../lib/checkHash');
@@ -36,20 +37,27 @@ test('uploadStream module', function(t){
     t.pass('Errors without a bucket passed in.');
   }
 
-  uploadStream.stream(fs.createReadStream(maine), 'output/data/upload.csv.gz', function(err, details){
+  var upload = uploadStream.stream( 'test/output/upload.csv.gz');
+
+  pump(fs.createReadStream(maine), upload, function(err){
     t.notOk(err, 'No error on okay upload.');
+  })
+  .on('uploaded', function(details){
     t.ok(details, 'Returns upload details.');
   });
 
   var up = new UploadStream('fakebucketqwkMljeqhwegqw');
+  var errStream = up.stream('qwdqqqqs/up.csv.gz');
 
-  up.stream(fs.createReadStream(maine), 'output/data/up.csv.gz', function(err){
-    t.ok(err, 'Errors on bad bucket.');
+  pump(fs.createReadStream(maine), errStream, function(){
+    t.pass('Errors on uploading to bad bucket.');
   });
+
 
 });
 
 test('retriever', function(t){
+
   t.plan(21);
 
   retriever({profile: 'default', directory: '.', file: 'nofile'}, function(err){
@@ -116,5 +124,6 @@ test('retriever', function(t){
     t.notOk(err, 'No error on zipped csv.');
     t.equal(count, 1, 'Loads data from zipped csv.');
   });
+
 });
 
