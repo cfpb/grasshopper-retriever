@@ -31,6 +31,7 @@ function retrieve(program, callback){
     });
   }
 
+  if(!program.file) return wrappedCb(new Error('Must provide a metadata file with the -f option.'));
 
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';

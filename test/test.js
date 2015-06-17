@@ -58,10 +58,14 @@ test('uploadStream module', function(t){
 
 test('retriever', function(t){
 
-  t.plan(21);
+  t.plan(22);
 
   retriever({profile: 'default', directory: '.', file: 'nofile'}, function(err){
     if(err) t.pass('Errors on bad file and no bucket.');
+  });
+
+  retriever({profile: 'default', directory: '.', file: ''}, function(err){
+    if(err) t.pass('Errors with no file passed.');
   });
 
   retriever({bucket: 'wyatt-test', profile: 'default', directory: '.', file: 'nofile'}, function(err){
