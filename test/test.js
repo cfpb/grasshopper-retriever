@@ -37,7 +37,7 @@ test('uploadStream module', function(t){
     t.pass('Errors without a bucket passed in.');
   }
 
-  var upload = uploadStream.stream( 'test/output/upload.csv.gz');
+  var upload = uploadStream.stream( 'test/output/upload.json');
 
   pump(fs.createReadStream(maine), upload, function(err){
     t.notOk(err, 'No error on okay upload.');
