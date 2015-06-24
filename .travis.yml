@@ -5,4 +5,4 @@ branches:
   only:
   - master
 before_install:
-  - ./build/setup_ubuntu.sh
+  - ./build/setup-ubuntu.sh
