@@ -13,7 +13,7 @@
   },
   {
     "name":"new_york",
-    "url":"http://gis.ny.gov/gisdata/fileserver/?DSID=921&file=SAM_Master_Statewide_Database.zip",
+    "url":"http://gis.ny.gov/gisdata/fileserver/?DSID=921&file=SAM_Master_Statewide_Database.gdb.zip",
     "hash":"e8acb21ea91d2322f2926bebc75f132074082f4b6f6850fb53234a0fe145518b",
     "file":"SAM_Master_Statewide_Database.gdb"
   },
@@ -35,5 +35,23 @@
     "url":"http://www.maine.gov/megis/catalog/shps/state/ng911pts.zip",
     "hash":"4eef696b407bd4c0fb0a0b99ff94c9facf65eee1bd36addc9ce673027e51b5d1",
     "file":"NG_Addresses.shp"
+  },
+  {
+    "name":"vermont",
+    "url":"http://maps.vcgi.org/gisdata/vcgi/packaged_zips/EmergencyE911_GDBE911.zip",
+    "hash":"f4fef40edf5220136b8723a3a9d1c311caa58aaa983c20a844c262a5f56bc0c1",
+    "file":"GDB_E911.gdb"
+  },
+  {
+    "name":"district_of_columbia",
+    "url":"http://opendata.dc.gov/datasets/aa514416aaf74fdc94748f1e56e7cc8a_0.zip",
+    "hash":"2f18750b06d0a800f58075da85fc7d74ee3552d9ac6b1c18b9c8a992a90bb27b",
+    "file":"Address_Points.shp"
+  },
+  {
+    "name":"rhode_island",
+    "url":"http://www.edc.uri.edu/rigis/spfdata/structure/e911Sites15r1.zip",
+    "hash":"732c126ce35be2a585971c19d2c6eb1fbc5e4347c1147f508fe59759aa83ca53",
+    "file":"e911Sites15r1.shp"
   }
 ]
