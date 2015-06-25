@@ -16,8 +16,8 @@ var restrictedReg = /\.\.|\//;
 
 function retrieve(program, callback){
 
-  var scratchSpace = 'retriever-scratch' + Math.random()*1e17;
-  fs.mkdirSync(scratchSpace);
+  var scratchSpace = 'scratch/' + Math.random()*1e17;
+  fs.mkdirsSync(scratchSpace);
 
 
   function wrappedCb(err, count){
@@ -82,7 +82,10 @@ function retrieve(program, callback){
     var request = hyperquest(record.url);
 
     checkHash(request, record.hash, function(hashIsEqual, remoteHash){
-      if(hashIsEqual) return;
+      if(hashIsEqual){
+        console.log('Remote file verified.');
+        return;
+      }
       request.unpipe();
       request.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
