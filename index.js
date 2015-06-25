@@ -2,7 +2,7 @@ var fs = require('fs-extra');
 var path = require('path');
 var spawn = require('child_process').spawn;
 var pump = require('pump');
-var hyperquest = require('hyperquest');
+var request = require('request');
 var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
@@ -79,22 +79,22 @@ function retrieve(program, callback){
        return recordCount;
     }
 
-    var request = hyperquest(record.url);
+    var req = request(record.url);
 
-    checkHash(request, record.hash, function(hashIsEqual, remoteHash){
+    checkHash(req, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual){
         console.log('Remote file verified.');
         return;
       }
-      request.unpipe();
-      request.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
+      req.unpipe();
+      req.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
 
-    request.on('error', recordCallback);
+    req.on('error', recordCallback);
 
     if(zipReg.test(record.url)){
       //unzip stream can't be pumped
-      request.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
+      req.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
        .on('close', function(){
 
         var unzipped = path.join(scratchSpace, record.name, record.file);
@@ -114,7 +114,7 @@ function retrieve(program, callback){
         var csv = path.join(scratchSpace, record.file);
         var csvStream = fs.createWriteStream(csv);
 
-        pump(request, csvStream, function(err){
+        pump(req, csvStream, function(err){
           if(err) return recordCallback(err);
 
           csvToVrt(csv, record.sourceSrs, function(err, vrt){
@@ -124,7 +124,7 @@ function retrieve(program, callback){
         });
 
       }else{
-        handleStream(spawnOgr(null, request), record, recordCallback);
+        handleStream(spawnOgr(null, req), record, recordCallback);
       }
     }
   });
