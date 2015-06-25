@@ -13,7 +13,7 @@
   },
   {
     "name":"new_york",
-    "url":"http://gis.ny.gov/gisdata/fileserver/?DSID=921&file=SAM_Master_Statewide_Database.gdb.zip",
+    "url":"http://gis.ny.gov/gisdata/data/ds_921/SAM_Master_Statewide.gdb.zip",
     "hash":"e8acb21ea91d2322f2926bebc75f132074082f4b6f6850fb53234a0fe145518b",
     "file":"SAM_Master_Statewide_Database.gdb"
   },
