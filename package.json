@@ -31,10 +31,11 @@
     "commander": "^2.8.1",
     "csv-to-vrt": "0.0.2",
     "fs-extra": "^0.18.4",
-    "hyperquest": "^1.2.0",
+    "ftp": "^0.3.10",
     "pump": "^1.0.0",
+    "request": "^2.58.0",
     "s3-upload-stream": "git://github.com/wpears/s3-upload-stream.git#end-override",
-    "unzip": "^0.1.11",
-    "tape": "^4.0.0"
+    "tape": "^4.0.0",
+    "unzip": "^0.1.11"
   }
 }
