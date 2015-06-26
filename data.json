@@ -14,7 +14,7 @@
   {
     "name":"new_york",
     "url":"http://gis.ny.gov/gisdata/data/ds_921/SAM_Master_Statewide.gdb.zip",
-    "hash":"e8acb21ea91d2322f2926bebc75f132074082f4b6f6850fb53234a0fe145518b",
+    "hash":"9a52775995af73fe5e6cd1aeaa9b52fbe9c35389c8657dbd75f99149caa10fd9",
     "file":"SAM_Master_Statewide_Database.gdb"
   },
   {
@@ -38,9 +38,9 @@
   },
   {
     "name":"vermont",
-    "url":"http://maps.vcgi.org/gisdata/vcgi/packaged_zips/EmergencyE911_GDBE911.zip",
-    "hash":"f4fef40edf5220136b8723a3a9d1c311caa58aaa983c20a844c262a5f56bc0c1",
-    "file":"GDB_E911.gdb"
+    "url":"http://maps.vcgi.org/gisdata/vcgi/packaged_zips/EmergencyE911_ESITE.zip",
+    "hash":"32a55c7f1440d2b14f6e7e43df81366d6366e954d66b927d7fe2ce7e55b92bac",
+    "file":"Emergency_ESITE_point.shp"
   },
   {
     "name":"district_of_columbia",
