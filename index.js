@@ -1,8 +1,10 @@
 var fs = require('fs-extra');
 var path = require('path');
+var url = require('url');
 var spawn = require('child_process').spawn;
 var pump = require('pump');
 var request = require('request');
+var ftp = require('ftp');
 var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
@@ -79,22 +81,36 @@ function retrieve(program, callback){
        return recordCount;
     }
 
-    var req = request(record.url);
+    if(url.parse(record.url).protocol === 'ftp:'){
+      var client = new ftp();
+      client.on('ready', function(){
+        client.get(record.url, function(err, stream){
+          if(err) return recordCallback(err);
+          processRequest(stream, record);
+        });
+      });
+    }else{
+      processRequest(request(record.url), record);
+    }
+  });
 
-    checkHash(req, record.hash, function(hashIsEqual, remoteHash){
+
+  function processRequest(stream, record){
+    checkHash(stream, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual){
         console.log('Remote file verified.');
         return;
       }
-      req.unpipe();
-      req.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
+      if(stream.unpipe) stream.unpipe();
+      if(stream.destroy) stream.destroy();
+      stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
 
-    req.on('error', recordCallback);
+    stream.on('error', recordCallback);
 
     if(zipReg.test(record.url)){
       //unzip stream can't be pumped
-      req.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
+      stream.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
        .on('close', function(){
 
         var unzipped = path.join(scratchSpace, record.name, record.file);
@@ -114,7 +130,7 @@ function retrieve(program, callback){
         var csv = path.join(scratchSpace, record.file);
         var csvStream = fs.createWriteStream(csv);
 
-        pump(req, csvStream, function(err){
+        pump(stream, csvStream, function(err){
           if(err) return recordCallback(err);
 
           csvToVrt(csv, record.sourceSrs, function(err, vrt){
@@ -124,11 +140,10 @@ function retrieve(program, callback){
         });
 
       }else{
-        handleStream(spawnOgr(null, req), record, recordCallback);
+        handleStream(spawnOgr(null, stream), record, recordCallback);
       }
     }
-  });
-
+  }
 
   function spawnOgr(file, stream){
     var child;
