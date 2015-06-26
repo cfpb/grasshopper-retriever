@@ -18,3 +18,4 @@ node_modules/
 
 # Project #
 test/output/*
+scratch/
