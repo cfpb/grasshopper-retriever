@@ -40,7 +40,6 @@ function retrieve(program, callback){
   var restrictedFound = 0;
 
   var uploadStream;
-
   var data;
 
   try{
@@ -81,14 +80,19 @@ function retrieve(program, callback){
        return recordCount;
     }
 
-    if(url.parse(record.url).protocol === 'ftp:'){
-      var client = new ftp();
-      client.on('ready', function(){
-        client.get(record.url, function(err, stream){
+    var urlObj = url.parse(record.url);
+    if(urlObj.protocol === 'ftp:'){
+      var ftpClient = new ftp();
+      ftpClient.on('ready', function(){
+        ftpClient.get(urlObj.path, function(err, stream){
           if(err) return recordCallback(err);
+          stream.on('end', function(){
+            ftpClient.end();
+          });
           processRequest(stream, record);
         });
       });
+      ftpClient.connect({host: urlObj.hostname});
     }else{
       processRequest(request(record.url), record);
     }
