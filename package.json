@@ -6,6 +6,9 @@
   "scripts": {
     "test": "node test/test.js"
   },
+  "bin": {
+    "grasshoppper-retriever": "retriever.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/cfpb/grasshopper-retriever.git"
@@ -23,8 +26,13 @@
   },
   "homepage": "https://github.com/cfpb/grasshopper-retriever",
   "dependencies": {
+    "aws-auto-auth": "^0.1.1",
     "aws-sdk": "^2.1.31",
-    "hyperquest": "^1.2.0"
+    "csv-to-vrt": "0.0.2",
+    "fs-extra": "^0.18.4",
+    "hyperquest": "^1.2.0",
+    "s3-upload-stream": "^1.0.7",
+    "unzip": "^0.1.11"
   },
   "devDependencies": {
     "tape": "^4.0.0"
