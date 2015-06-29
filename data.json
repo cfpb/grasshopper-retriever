@@ -44,8 +44,8 @@
   },
   {
     "name":"district_of_columbia",
-    "url":"http://opendata.dc.gov/datasets/aa514416aaf74fdc94748f1e56e7cc8a_0.zip",
-    "hash":"4e9a57af826a914b48c0e6ab65423d92ad95f0f05df7945f64ae18b1be56337b",
+    "url":"http://opendata.dc.gov/agol/arcgis/aa514416aaf74fdc94748f1e56e7cc8a/0.zip",
+    "hash":"2b116c628c64bcc21f53116ed9265dd4cd51b080f0d6bec3201fcb6c77f75d11",
     "file":"Address_Points.shp"
   },
   {
