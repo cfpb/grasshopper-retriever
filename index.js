@@ -1,4 +1,5 @@
 var fs = require('fs-extra');
+var util = require('util');
 var path = require('path');
 var url = require('url');
 var spawn = require('child_process').spawn;
@@ -18,6 +19,7 @@ var restrictedReg = /\.\.|\//;
 
 function retrieve(program, callback){
 
+  var errs = [];
   var scratchSpace = 'scratch/' + Math.random()*1e17;
   fs.mkdirsSync(scratchSpace);
 
@@ -29,6 +31,13 @@ function retrieve(program, callback){
         throw err||e;
       }
 
+      if(errs.length){
+        console.log("Encountered %d errors.", errs.length);
+        errs.forEach(function(v){
+          console.log(v);
+        });
+      }
+
       if(callback) callback(err, count);
     });
   }
@@ -37,7 +46,6 @@ function retrieve(program, callback){
 
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
-  var restrictedFound = 0;
 
   var uploadStream;
   var data;
@@ -53,7 +61,10 @@ function retrieve(program, callback){
 
 
   function recordCallback(err){
-    if(err) return wrappedCb(err);
+    if(err){
+      console.log(err);
+      errs.push(err);
+    }
     if(++processed === recordCount) wrappedCb(null, recordCount);
   }
 
@@ -64,11 +75,8 @@ function retrieve(program, callback){
 
     //Don't allow to traverse to other folders via data.json
     if(restrictedReg.test(record.name)){
-      restrictedFound = 1;
-      return wrappedCb(new Error('Invalid record name. Must not contain ".." or "/".'));
+      return recordCallback(new Error(util.format('Invalid record name %s. Must not contain ".." or "/".', record.name)));
     }
-
-    if(restrictedFound) return;
 
     //If the record is filtered, remove it from the count
     if(stringMatch && record.name.indexOf(program.match) === -1 ||
@@ -85,7 +93,10 @@ function retrieve(program, callback){
       var ftpClient = new ftp();
       ftpClient.on('ready', function(){
         ftpClient.get(urlObj.path, function(err, stream){
-          if(err) return recordCallback(err);
+          if(err){
+            ftpClient.end();
+            return recordCallback(err);
+          }
           stream.on('end', function(){
             ftpClient.end();
           });
@@ -105,12 +116,10 @@ function retrieve(program, callback){
         console.log('Remote file verified.');
         return;
       }
-      if(stream.unpipe) stream.unpipe();
-      if(stream.destroy) stream.destroy();
       stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
 
-    stream.on('error', recordCallback);
+    stream.on('error', handleStreamError);
 
     if(zipReg.test(record.url)){
       //unzip stream can't be pumped
@@ -122,13 +131,13 @@ function retrieve(program, callback){
         if(csvReg.test(record.file)){
           csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
             if(err) return recordCallback(err);
-            handleStream(spawnOgr(vrt), record, recordCallback);
+            handleStream(spawnOgr(vrt), record);
           });
         }else{
-          handleStream(spawnOgr(unzipped), record, recordCallback);
+          handleStream(spawnOgr(unzipped), record);
         }
       })
-      .on('error', recordCallback);
+      .on('error', handleStreamError);
     }else{
       if(csvReg.test(record.file)){
         var csv = path.join(scratchSpace, record.file);
@@ -139,15 +148,23 @@ function retrieve(program, callback){
 
           csvToVrt(csv, record.sourceSrs, function(err, vrt){
             if(err) return recordCallback(err);
-            handleStream(spawnOgr(vrt), record, recordCallback);
+            handleStream(spawnOgr(vrt), record);
           });
         });
 
       }else{
-        handleStream(spawnOgr(null, stream), record, recordCallback);
+        handleStream(spawnOgr(null, stream), record);
       }
     }
   }
+
+
+  function handleStreamError(err){
+    if(this.unpipe) this.unpipe();
+    if(this.destroy) this.destroy();
+    recordCallback(err);
+  }
+
 
   function spawnOgr(file, stream){
     var child;
@@ -162,9 +179,7 @@ function retrieve(program, callback){
   }
 
 
-  function handleStream(stream, record, cb){
-    if(!cb) cb = function(err){if(err) wrappedCb(err)}
-
+  function handleStream(stream, record){
     var endfile = path.join(program.directory, record.name + '.csv.gz');
     var zipStream = zlib.createGzip();
     var destStream;
@@ -176,8 +191,7 @@ function retrieve(program, callback){
     }
 
     pump(stream, zipStream, destStream, function(err){
-      if(err) return cb(err);
-      cb();
+      recordCallback(err);
     });
   }
 
