@@ -71,6 +71,7 @@ function retrieve(program, callback){
     if(err){
       winston.error(err);
       errs.push(err);
+      recordCount--;
     }
     if(++processed === recordCount) wrappedCb(null, recordCount);
   }
