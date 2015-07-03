@@ -3,6 +3,7 @@ var util = require('util');
 var path = require('path');
 var url = require('url');
 var spawn = require('child_process').spawn;
+var winston = require('winston');
 var pump = require('pump');
 var request = require('request');
 var ftp = require('ftp');
@@ -23,22 +24,28 @@ function retrieve(program, callback){
   var scratchSpace = 'scratch/' + Math.random()*1e17;
   fs.mkdirsSync(scratchSpace);
 
+  var logger = new winston.Logger();
+
+  if(program.quiet){
+    logger.remove(winston.transports.Console);
+  }
+
 
   function wrappedCb(err, count){
+    if(err) errs.push(err);
     fs.remove(scratchSpace, function(e){
-      if(err||e){
-        if(callback) return callback(err||e);
-        throw err||e;
-      }
+      if(e) errs.push(e);
 
       if(errs.length){
-        console.log("Encountered %d errors.", errs.length);
+        winston.error('Encountered %d error%s whilst retrieving.', errs.length, errs.length > 1 ? 's' : '');
         errs.forEach(function(v){
-          console.log(v);
+          winston.error(v);
         });
+        if(callback) return callback(errs);
+        throw errs.join('\n');
       }
 
-      if(callback) callback(err, count);
+      if(callback) callback(null, count);
     });
   }
 
@@ -62,7 +69,7 @@ function retrieve(program, callback){
 
   function recordCallback(err){
     if(err){
-      console.log(err);
+      winston.error(err);
       errs.push(err);
     }
     if(++processed === recordCount) wrappedCb(null, recordCount);
@@ -113,7 +120,7 @@ function retrieve(program, callback){
   function processRequest(stream, record){
     checkHash(stream, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual){
-        console.log('Remote file verified.');
+        winston.info('Remote file for %s verified.', record.name);
         return;
       }
       stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));

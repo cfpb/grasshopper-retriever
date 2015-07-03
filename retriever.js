@@ -12,10 +12,10 @@ program
   .option('-d, --directory <directory>', 'A directory where the data should be loaded, either relative to the current folder or the passed S3 bucket.', '.')
   .option('-f --file <file>', 'The json data file that contains the collected data endpoints.')
   .option('-m --match <match>', 'A string or regular expression that the names from the <file> must contain or match', '')
+  .option('-q --quiet', 'Suppress logging.', false)
   .parse(process.argv);
 
-retriever(program, function(err, retrieved){
-  if(err) throw err;
+retriever(program, function(errs, retrieved){
   console.log('Fetched %d source%s and placed %s in %s%s',
     retrieved,
     retrieved === 1 ? '' : 's',
