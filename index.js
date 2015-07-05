@@ -24,7 +24,11 @@ function retrieve(program, callback){
   var scratchSpace = 'scratch/' + Math.random()*1e17;
   fs.mkdirsSync(scratchSpace);
 
-  var logger = new winston.Logger();
+  var logger = new winston.Logger({
+    transports: [
+      new (winston.transports.Console)()
+    ]
+  });
 
   if(program.quiet){
     logger.remove(winston.transports.Console);
@@ -37,9 +41,9 @@ function retrieve(program, callback){
       if(e) errs.push(e);
 
       if(errs.length){
-        winston.error('Encountered %d error%s whilst retrieving.', errs.length, errs.length > 1 ? 's' : '');
+        logger.error('Encountered %d error%s whilst retrieving.', errs.length, errs.length > 1 ? 's' : '');
         errs.forEach(function(v){
-          winston.error(v);
+          logger.error(v);
         });
         if(callback) return callback(errs);
         throw errs.join('\n');
@@ -69,7 +73,7 @@ function retrieve(program, callback){
 
   function recordCallback(err){
     if(err){
-      winston.error(err);
+      logger.error(err);
       errs.push(err);
       recordCount--;
     }else{
@@ -123,7 +127,7 @@ function retrieve(program, callback){
   function processRequest(stream, record){
     checkHash(stream, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual){
-        winston.info('Remote file for %s verified.', record.name);
+        logger.info('Remote file for %s verified.', record.name);
         return;
       }
       stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));

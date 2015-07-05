@@ -60,32 +60,32 @@ test('retriever', function(t){
 
   t.plan(22);
 
-  retriever({profile: 'default', directory: '.', file: 'nofile'}, function(err){
+  retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(err){
     if(err) t.pass('Errors on bad file and no bucket.');
   });
 
-  retriever({profile: 'default', directory: '.', file: ''}, function(err){
+  retriever({quiet: true, profile: 'default', directory: '.', file: ''}, function(err){
     if(err) t.pass('Errors with no file passed.');
   });
 
-  retriever({bucket: 'wyatt-test', profile: 'default', directory: '.', file: 'nofile'}, function(err){
+  retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: 'nofile'}, function(err){
     if(err) t.pass('Errors on bad file and good bucket.');
   });
 
-  retriever({bucket: 'wyatt-test', profile: 'default', directory: '.', file: 'test/data/parent_dir.json'}, function(err){
+  retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: 'test/data/parent_dir.json'}, function(err){
     if(err) t.pass('Errors on parent dir in record name.');
   });
 
-  retriever({bucket: 'wyatt-test', profile: 'default', directory: '.', file: 'test/data/slash.json'}, function(err){
+  retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: 'test/data/slash.json'}, function(err){
     if(err) t.pass('Errors on forward slash in record name.');
   });
 
-  retriever({bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine}, function(err, count){
+  retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine}, function(err, count){
     t.notOk(err, 'No error on good file and bucket.');
     t.equal(count, 1, 'Loads data from the test dataset to bucket.');
   });
 
-  retriever({bucket: 'fakebucketskjhqblwjdqwobdjabmznmbxbcbcnnbmcioqwOws', profile: 'default', directory: '.', file: maine}, function(err){
+  retriever({quiet: true, bucket: 'fakebucketskjhqblwjdqwobdjabmznmbxbcbcnnbmcioqwOws', profile: 'default', directory: '.', file: maine}, function(err){
     t.ok(err, 'Error on bad bucket.');
   });
 
@@ -99,32 +99,32 @@ test('retriever', function(t){
       t.equal(code, 0, 'Works without a callback.');
     });
 
-  retriever({profile: 'default', directory: 'test/output', file: maine}, function(err, count){
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: maine}, function(err, count){
     t.notOk(err, 'No error on good file.');
     t.equal(count, 1, 'Loads data from test data locally.');
   });
 
-  retriever({bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine, match: 'maine'}, function(err, count){
+  retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine, match: 'maine'}, function(err, count){
     t.notOk(err, 'No error with match.');
     t.equal(count, 1, 'Loads matched data.');
   });
 
-  retriever({bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine, match: 'nomatch'}, function(err, count){
+  retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine, match: 'nomatch'}, function(err, count){
     t.notOk(err, 'No error with no match.');
     t.equal(count, 0, 'Loads nothing when no data matched.');
   });
 
-  retriever({profile: 'default', directory: 'test/output', file: 'test/data/mainejson.json'}, function(err, count){
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainejson.json'}, function(err, count){
     t.notOk(err, 'No error on good json file.');
     t.equal(count, 1, 'Loads data from json file.');
   });
 
-  retriever({profile: 'default', directory: 'test/output', file: 'test/data/mainecsv.json'}, function(err, count){
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainecsv.json'}, function(err, count){
     t.notOk(err, 'No error on csv.');
     t.equal(count, 1, 'Loads data from csv.');
   });
 
-  retriever({profile: 'default', directory: 'test/output', file: 'test/data/mainezipcsv.json'}, function(err, count){
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainezipcsv.json'}, function(err, count){
     t.notOk(err, 'No error on zipped csv.');
     t.equal(count, 1, 'Loads data from zipped csv.');
   });
