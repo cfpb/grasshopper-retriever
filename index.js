@@ -72,8 +72,10 @@ function retrieve(program, callback){
       winston.error(err);
       errs.push(err);
       recordCount--;
+    }else{
+      processed++;
     }
-    if(++processed === recordCount) wrappedCb(null, recordCount);
+    if(processed === recordCount) wrappedCb(null, recordCount);
   }
 
 
@@ -88,12 +90,12 @@ function retrieve(program, callback){
 
     //If the record is filtered, remove it from the count
     if(stringMatch && record.name.indexOf(program.match) === -1 ||
-       regMatch && !program.match.test(record.name)
+      regMatch && !program.match.test(record.name)
     ){
-       if(--recordCount === processed){
-         return wrappedCb(null, recordCount);
-       }
-       return recordCount;
+      if(--recordCount === processed){
+        return wrappedCb(null, recordCount);
+      }
+      return recordCount;
     }
 
     var urlObj = url.parse(record.url);
