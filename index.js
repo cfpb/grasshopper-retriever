@@ -37,20 +37,23 @@ function retrieve(program, callback){
 
   function wrappedCb(err, count){
     if(err) errs.push(err);
-    fs.remove(scratchSpace, function(e){
+
+    try{
+      fs.removeSync(scratchSpace);
+    }catch(e){
       if(e) errs.push(e);
+    }
 
-      if(errs.length){
-        logger.error('Encountered %d error%s whilst retrieving.', errs.length, errs.length > 1 ? 's' : '');
-        errs.forEach(function(v){
-          logger.error(v);
-        });
-        if(callback) return callback(errs);
-        throw errs.join('\n');
-      }
+    if(errs.length){
+      logger.error('Encountered %d error%s whilst retrieving.', errs.length, errs.length > 1 ? 's' : '');
+      errs.forEach(function(v){
+        logger.error(v);
+      });
+      if(callback) return callback(errs, count);
+      throw errs.join('\n');
+    }
 
-      if(callback) callback(null, count);
-    });
+    if(callback) callback(null, count);
   }
 
   if(!program.file) return wrappedCb(new Error('Must provide a metadata file with the -f option.'));
@@ -93,7 +96,7 @@ function retrieve(program, callback){
     }
 
     //If the record is filtered, remove it from the count
-    if(stringMatch && record.name.indexOf(program.match) === -1 ||
+    if(stringMatch && program.match.indexOf(record.name) === -1 ||
       regMatch && !program.match.test(record.name)
     ){
       if(--recordCount === processed){

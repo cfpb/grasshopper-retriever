@@ -58,7 +58,7 @@ test('uploadStream module', function(t){
 
 test('retriever', function(t){
 
-  t.plan(22);
+  t.plan(28);
 
   retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(err){
     if(err) t.pass('Errors on bad file and no bucket.');
@@ -129,19 +129,21 @@ test('retriever', function(t){
     t.equal(count, 1, 'Loads data from zipped csv.');
   });
 
-  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainearkanderr.json'}, function(err, count){
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(err, count){
+    console.log(err);
     t.equal(err.length, 1, 'Hash error from file with hash error.')
-    t.equal(count, 2, 'Loads data that can be loaded.');
+    t.equal(count, 2, 'Loads data after hash error.');
   });
 
-  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainearkandparenterr.json'}, function(err, count){
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkandparenterr.json'}, function(err, count){
+    console.log(err);
     t.equal(err.length, 1, 'Parent dir error');
-    t.equal(count, 2, 'Loads data that can be loaded.');
+    t.equal(count, 2, 'Loads data after parent dir error.');
   });
 
-  retriever({match: 'maine, arkansas', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainearkanderr.json'}, function(err, count){
+  retriever({match: 'maine, arkansas', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(err, count){
     t.notOk(err, 'No error on filtered file.')
-    t.equal(count, 2, 'Loads data that can be loaded.');
+    t.equal(count, 2, 'Loads data after filter.');
   });
 
 });
