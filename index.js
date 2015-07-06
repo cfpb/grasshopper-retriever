@@ -35,7 +35,7 @@ function retrieve(program, callback){
   }
 
 
-  function wrappedCb(err, count){
+  function wrappedCb(err){
     if(err) errs.push(err);
 
     try{
@@ -49,11 +49,10 @@ function retrieve(program, callback){
       errs.forEach(function(v){
         logger.error(v);
       });
-      if(callback) return callback(errs, count);
-      throw errs.join('\n');
+      if(!callback) throw errs.join('\n');
     }
 
-    if(callback) callback(null, count);
+    if(callback) callback(errs, processedRecords);
   }
 
   if(!program.file) return wrappedCb(new Error('Must provide a metadata file with the -f option.'));
@@ -71,18 +70,17 @@ function retrieve(program, callback){
   }
 
   var recordCount = data.length;
-  var processed = 0;
+  var processedRecords = [];
 
-
-  function recordCallback(err){
+  function recordCallback(err, record){
     if(err){
       logger.error(err);
       errs.push(err);
       recordCount--;
     }else{
-      processed++;
+      processedRecords.push(record);
     }
-    if(processed === recordCount) wrappedCb(null, recordCount);
+    if(processedRecords.length === recordCount) wrappedCb(null);
   }
 
 
@@ -99,8 +97,8 @@ function retrieve(program, callback){
     if(stringMatch && program.match.indexOf(record.name) === -1 ||
       regMatch && !program.match.test(record.name)
     ){
-      if(--recordCount === processed){
-        return wrappedCb(null, recordCount);
+      if(--recordCount === processedRecords.length){
+        return wrappedCb(null);
       }
       return recordCount;
     }
