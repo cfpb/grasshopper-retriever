@@ -1,0 +1,20 @@
+[
+  {
+    "name":"maine",
+    "url":"https://cfpb.github.io/grasshopper-retriever/maine.zip",
+    "hash":"7e047fa12e048ebed7e0b7cbd80621a39996666396e685a092ae30f5ea2ee79e",
+    "file":"maine.shp"
+  },
+  {
+    "name":"arkansas",
+    "url":"https://cfpb.github.io/grasshopper-retriever/arkansas.json",
+    "hash":"7e047fa12e048ebed7e0b7cbd80621a39996666396e685a092ae30f5ea2ee79e",
+    "file":"arkansas.json"
+  },
+  {
+    "name":"../",
+    "url":"https://cfpb.github.io/grasshopper-retriever/north_carolina.json",
+    "hash":"7e047fa12e048ebed7e0b7cbd80621a39996666396e685a092ae30f5ea2ee79e",
+    "file":"north_carolina.json"
+  }
+]

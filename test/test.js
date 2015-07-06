@@ -129,5 +129,20 @@ test('retriever', function(t){
     t.equal(count, 1, 'Loads data from zipped csv.');
   });
 
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainearkanderr.json'}, function(err, count){
+    t.equal(err.length, 1, 'Hash error from file with hash error.')
+    t.equal(count, 2, 'Loads data that can be loaded.');
+  });
+
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainearkandparenterr.json'}, function(err, count){
+    t.equal(err.length, 1, 'Parent dir error');
+    t.equal(count, 2, 'Loads data that can be loaded.');
+  });
+
+  retriever({match: 'maine, arkansas', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/mainearkanderr.json'}, function(err, count){
+    t.notOk(err, 'No error on filtered file.')
+    t.equal(count, 2, 'Loads data that can be loaded.');
+  });
+
 });
 
