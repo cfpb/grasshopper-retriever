@@ -28,6 +28,7 @@
   "dependencies": {
     "aws-auto-auth": "^0.1.1",
     "aws-sdk": "^2.1.31",
+    "centroid-stream": "^0.1.0",
     "commander": "^2.8.1",
     "csv-to-vrt": "0.0.2",
     "end-of-stream": "https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.1.0.tgz",

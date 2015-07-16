@@ -11,6 +11,7 @@ var ftp = require('ftp');
 var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
+var centroidStream = require('centroid-stream');
 var UploadStream = require('./lib/UploadStream');
 var checkHash = require('./lib/checkHash');
 
@@ -118,7 +119,7 @@ function retrieve(program, callback){
             return recordCallback(err);
           }
 
-          eos(stream, function(err){
+          eos(stream, function(){
             ftpClient.end();
           });
 
@@ -191,15 +192,20 @@ function retrieve(program, callback){
 
 
   function spawnOgr(file, stream){
-    var child;
+    var jsonChild;
 
     if(stream){
-      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
-      pump(stream, child.stdin);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', '/vsistdin/']);
+      pump(stream, jsonChild.stdin);
     }else{
-      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', file]);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', file]);
     }
-    return child.stdout;
+
+    var centroids = centroidStream();
+    var csvChild = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
+
+    pump(jsonChild.stdout, centroids, csvChild.stdin);
+    return csvChild.stdout;
   }
 
 
