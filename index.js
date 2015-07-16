@@ -5,6 +5,7 @@ var url = require('url');
 var spawn = require('child_process').spawn;
 var winston = require('winston');
 var pump = require('pump');
+var eos = require('end-of-stream');
 var request = require('request');
 var ftp = require('ftp');
 var zlib = require('zlib');
@@ -104,21 +105,29 @@ function retrieve(program, callback){
     }
 
     var urlObj = url.parse(record.url);
+
     if(urlObj.protocol === 'ftp:'){
+
       var ftpClient = new ftp();
+
       ftpClient.on('ready', function(){
         ftpClient.get(urlObj.path, function(err, stream){
+
           if(err){
             ftpClient.end();
             return recordCallback(err);
           }
-          stream.on('end', function(){
+
+          eos(stream, function(err){
             ftpClient.end();
           });
+
           processRequest(stream, record);
         });
       });
+
       ftpClient.connect({host: urlObj.hostname});
+
     }else{
       processRequest(request(record.url), record);
     }
@@ -195,6 +204,16 @@ function retrieve(program, callback){
 
 
   function handleStream(stream, record){
+    if(!program.bucket && !program.directory){
+      return eos(stream, function(err){
+        recordCallback(err);
+      });
+    }
+
+    if(program.bucket && !program.directory){
+      program.directory = '.';
+    }
+
     var endfile = path.join(program.directory, record.name + '.csv.gz');
     var zipStream = zlib.createGzip();
     var destStream;
@@ -209,7 +228,6 @@ function retrieve(program, callback){
       recordCallback(err);
     });
   }
-
 
 }
 
