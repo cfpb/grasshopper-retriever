@@ -73,5 +73,6 @@ dist/
 
 # Project #
 test/output/
+scratch/
 !maine.zip
 !maine.csv.zip
