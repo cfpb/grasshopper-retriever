@@ -195,10 +195,10 @@ function retrieve(program, callback){
     var jsonChild;
 
     if(stream){
-      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', '/vsistdin/']);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '/vsistdout/', '/vsistdin/']);
       pump(stream, jsonChild.stdin);
     }else{
-      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', file]);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '/vsistdout/', file]);
     }
 
     var centroids = centroidStream();
