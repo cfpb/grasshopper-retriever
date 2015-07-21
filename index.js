@@ -7,6 +7,7 @@ var winston = require('winston');
 var pump = require('pump');
 var eos = require('end-of-stream');
 var request = require('request');
+var OgrJsonStream = require('ogr-json-stream');
 var ftp = require('ftp');
 var zlib = require('zlib');
 var unzip = require('unzip');
@@ -201,10 +202,9 @@ function retrieve(program, callback){
       jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '/vsistdout/', file]);
     }
 
-    var centroids = centroidStream();
     var csvChild = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
 
-    pump(jsonChild.stdout, centroids, csvChild.stdin);
+    pump(jsonChild.stdout, OgrJsonStream(), centroidStream.stringify(), csvChild.stdin);
     return csvChild.stdout;
   }
 

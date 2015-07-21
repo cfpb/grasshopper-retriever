@@ -58,7 +58,7 @@ test('uploadStream module', function(t){
 
 test('retriever', function(t){
 
-  t.plan(28);
+  t.plan(30);
 
   retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(errs){
     t.equal(errs.length, 1, 'Errors on bad file and no bucket.');
@@ -132,6 +132,11 @@ test('retriever', function(t){
   retriever({match: 'maine, arkansas', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(errs, processedRecords){
     t.equal(errs.length, 0, 'No error on filtered file.')
     t.equal(processedRecords.length, 2, 'Loads data after filter.');
+  });
+
+  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/parcelsjson.json'}, function(errs, processedRecords){
+    t.equal(errs.length, 0, 'No error on converted parcels.')
+    t.equal(processedRecords.length, 1, 'Loads data from parcels');
   });
 
   spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', maine])
