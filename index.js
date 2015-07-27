@@ -19,6 +19,7 @@ var checkHash = require('./lib/checkHash');
 var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
 var restrictedReg = /\.\.|\//;
+var comma = new Buffer(',');
 
 
 function retrieve(program, callback){
@@ -188,6 +189,7 @@ function retrieve(program, callback){
   function handleStreamError(err){
     if(this.unpipe) this.unpipe();
     if(this.destroy) this.destroy();
+    if(this.kill) this.kill();
     recordCallback(err);
   }
 
@@ -196,15 +198,30 @@ function retrieve(program, callback){
     var jsonChild;
 
     if(stream){
-      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '/vsistdout/', '/vsistdin/']);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', '/vsistdin/']);
       pump(stream, jsonChild.stdin);
     }else{
-      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '/vsistdout/', file]);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', file]);
     }
 
-    var csvChild = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
+    var csvChild = spawn('ogr2ogr', ['-f', 'CSV', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
+    var ogrJsonStream = OgrJsonStream();
+    var centroids = centroidStream.stringify();
 
-    pump(jsonChild.stdout, OgrJsonStream(), centroidStream.stringify(), csvChild.stdin);
+    pump(jsonChild.stdout, ogrJsonStream, centroids, function(){
+      csvChild.stdin.end(']}');
+    });
+
+    csvChild.stdin.write('{"type":"FeatureCollection","features":[');
+
+    csvChild.stderr.once('data', function(data){
+      handleStreamError.call(csvChild, new Error('Error converting to csv. ' + data.toString()))
+    });
+
+    centroids.on('data', function(data){
+      csvChild.stdin.write(Buffer.concat([data, comma]));
+    });
+
     return csvChild.stdout;
   }
 
