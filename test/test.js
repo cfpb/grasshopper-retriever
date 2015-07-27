@@ -129,7 +129,7 @@ test('retriever', function(t){
     t.equal(processedRecords.length, 2, 'Loads data after parent dir error.');
   });
 
-  retriever({match: 'maine, arkansas', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(errs, processedRecords){
+  retriever({match: 'maineerr, arkansaserr', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(errs, processedRecords){
     t.equal(errs.length, 0, 'No error on filtered file.')
     t.equal(processedRecords.length, 2, 'Loads data after filter.');
   });
@@ -151,3 +151,22 @@ test('retriever', function(t){
 
 });
 
+test('Ensure output', function(t){
+  t.plan(8);
+
+  var outfiles = [
+    {file: 'test/output/arkansas.csv.gz', hash: '2e50e44d42b2c1ab7aa22d3f1c704ee127298f409deb0a2fddbff49dfd5aebbe'},
+    {file: 'test/output/maine.csv.gz', hash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
+    {file: 'test/output/north_carolina.csv.gz', hash: '94795e123dc028d643db2dba749816d17ad4b222b0d6686c44b4e406ad98bf56'},
+    {file: 'test/output/sacramento.csv.gz', hash: '486c0dba103103fbaa87e2a74a5457a724f0ed3f0af8b6c0bdef6254752a39c4'}
+  ];
+
+  outfiles.forEach(function(obj){
+    var stream = fs.createReadStream(obj.file);
+    var hash = obj.hash;
+    checkHash(stream, hash, function(hashIsEqual, computedHash){
+      t.ok(hashIsEqual, 'Computes proper hash');
+      t.equal(hash, computedHash, 'Precomputed hash equals computed hash');
+    });
+  });
+});
