@@ -208,6 +208,14 @@ function retrieve(program, callback){
     var ogrJsonStream = OgrJsonStream();
     var centroids = centroidStream.stringify();
 
+    jsonChild.stderr.on('data', function(errorText){
+      jsonChild.stdout.emit('error', errorText);
+    });
+
+    csvChild.stderr.on('data', function(errorText){
+      csvChild.stdout.emit('error', errorText);
+    });
+
     pump(jsonChild.stdout, ogrJsonStream, centroids, function(){
       csvChild.stdin.end(']}');
     });
