@@ -26,10 +26,9 @@
   },
   "homepage": "https://github.com/cfpb/grasshopper-retriever",
   "dependencies": {
-    "JSONStream": "calvinmetcalf/JSONStream#19c4ce43e24",
     "aws-auto-auth": "^0.1.1",
     "aws-sdk": "^2.1.31",
-    "centroid-stream": "^0.2.0",
+    "centroid-stream": "^0.3.0",
     "commander": "^2.8.1",
     "csv-to-vrt": "0.0.2",
     "end-of-stream": "https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.1.0.tgz",
