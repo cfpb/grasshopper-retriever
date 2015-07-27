@@ -1,5 +1,6 @@
 var test = require('tape');
 var fs = require('fs');
+var os = require('os');
 var pump = require('pump');
 var spawn = require('child_process').spawn;
 var retriever = require('../index');
@@ -155,18 +156,20 @@ test('Ensure output', function(t){
   t.plan(8);
 
   var outfiles = [
-    {file: 'test/output/arkansas.csv.gz', hash: '2e50e44d42b2c1ab7aa22d3f1c704ee127298f409deb0a2fddbff49dfd5aebbe'},
-    {file: 'test/output/maine.csv.gz', hash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
-    {file: 'test/output/north_carolina.csv.gz', hash: '94795e123dc028d643db2dba749816d17ad4b222b0d6686c44b4e406ad98bf56'},
-    {file: 'test/output/sacramento.csv.gz', hash: '486c0dba103103fbaa87e2a74a5457a724f0ed3f0af8b6c0bdef6254752a39c4'}
+    {file: 'test/output/arkansas.csv.gz', osxhash: '2e50e44d42b2c1ab7aa22d3f1c704ee127298f409deb0a2fddbff49dfd5aebbe', ubuntuhash: '8b76792518342b0c557d5c948b8a282625936086ab7ddeaa394662dab120b1e6'},
+    {file: 'test/output/maine.csv.gz', osxhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb', ubuntuhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
+    {file: 'test/output/north_carolina.csv.gz', osxhash: '94795e123dc028d643db2dba749816d17ad4b222b0d6686c44b4e406ad98bf56', ubuntuhash: '318ea9987f7f3e3208026ca589ccbd1076d6aa219c286068556d8f9fcbf0e324'},
+    {file: 'test/output/sacramento.csv.gz', osxhash: '486c0dba103103fbaa87e2a74a5457a724f0ed3f0af8b6c0bdef6254752a39c4', ubuntuhash: '5106df46f78f9a9af787d4c523cbfacf05dba746e1f7a9c62723dc8caa04acf2'}
   ];
 
   outfiles.forEach(function(obj){
     var stream = fs.createReadStream(obj.file);
-    var hash = obj.hash;
-    checkHash(stream, hash, function(hashIsEqual, computedHash){
+    var hash = os.platform() === 'darwin' ? 'osxhash' : 'ubuntuhash';
+
+    checkHash(stream, obj[hash], function(hashIsEqual, computedHash){
       t.ok(hashIsEqual, 'Computes proper hash');
-      t.equal(hash, computedHash, 'Precomputed hash equals computed hash');
+      t.equal(obj[hash], computedHash, 'Precomputed hash equals computed hash');
     });
+
   });
 });
