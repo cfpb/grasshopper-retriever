@@ -66,7 +66,9 @@ test('retriever', function(t){
   });
 
   retriever({quiet: true, profile: 'noprofilepresentfakeprofile', 'bucket': 'wyatt-test', file: maine}, function(errs){
-    t.equal(errs.length, 1, 'Errors on bad profile.');
+    var errLen = 1;
+    if(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) errLen = 0;
+    t.equal(errs.length, errLen, 'Errors on bad profile, only without environment variables set.');
   });
 
   retriever({quiet: true, profile: 'default', directory: '.', file: ''}, function(errs){
