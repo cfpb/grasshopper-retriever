@@ -59,10 +59,14 @@ test('uploadStream module', function(t){
 
 test('retriever', function(t){
 
-  t.plan(30);
+  t.plan(31);
 
   retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(errs){
     t.equal(errs.length, 1, 'Errors on bad file and no bucket.');
+  });
+
+  retriever({quiet: true, profile: 'noprofilepresentfakeprofile', 'bucket': 'wyatt-test', file: maine}, function(errs){
+    t.equal(errs.length, 1, 'Errors on bad profile.');
   });
 
   retriever({quiet: true, profile: 'default', directory: '.', file: ''}, function(errs){
