@@ -40,7 +40,7 @@
     "s3-upload-stream": "git://github.com/wpears/s3-upload-stream.git#end-override",
     "tape": "^4.0.0",
     "through2": "^2.0.0",
-    "unzip": "^0.1.11",
-    "winston": "^1.0.1"
+    "winston": "^1.0.1",
+    "yauzl": "^2.3.1"
   }
 }
