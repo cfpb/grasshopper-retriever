@@ -10,7 +10,7 @@ var request = require('request');
 var OgrJsonStream = require('ogr-json-stream');
 var ftp = require('ftp');
 var zlib = require('zlib');
-var unzip = require('unzip');
+var yauzl = require('yauzl');
 var csvToVrt = require('csv-to-vrt');
 var centroidStream = require('centroid-stream');
 var UploadStream = require('./lib/UploadStream');
@@ -149,22 +149,51 @@ function retrieve(program, callback){
     stream.on('error', handleStreamError);
 
     if(zipReg.test(record.url)){
-      //unzip stream can't be pumped
-      stream.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
-       .on('close', function(){
+      var zipdir = path.join(scratchSpace, record.name);
+      var zipfile = zipdir + '.zip';
 
-        var unzipped = path.join(scratchSpace, record.name, record.file);
+      pump(stream, fs.createWriteStream(zipfile), function(err){
+        if(err) return stream.emit('error', err);
 
-        if(csvReg.test(record.file)){
-          csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
-            if(err) return recordCallback(err);
-            handleStream(spawnOgr(vrt), record);
+        yauzl.open(zipfile, function(err, zip){
+          if(err) return recordCallback(err);
+          var entriesFinished = 0;
+          var count = 0;
+
+          zip.on('end', function(){
+            entriesFinished = 1;
           });
-        }else{
-          handleStream(spawnOgr(unzipped), record);
-        }
-      })
-      .on('error', handleStreamError);
+
+          zip.on('entry', function(entry){
+            if(/\/$/.test(entry.fileName)) return;
+
+            zip.openReadStream(entry, function(err, readStream) {
+              if(err) return handleStreamError.call(this, err);
+              count++;
+              var output = fs.createOutputStream(path.join(zipdir, entry.fileName));
+
+              pump(readStream, output, function(err){
+                if(err) return recordCallback(err);
+                count--;
+                if(entriesFinished && !count){
+                  var unzipped = path.join(zipdir, record.file);
+
+                  if(csvReg.test(record.file)){
+
+                    csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
+                      if(err) return recordCallback(err);
+                      handleStream(spawnOgr(vrt), record);
+                    });
+
+                  }else{
+                    handleStream(spawnOgr(unzipped), record);
+                  }
+                }
+              });
+            });
+          });
+        });
+      });
     }else{
       if(csvReg.test(record.file)){
         var csv = path.join(scratchSpace, record.file);
