@@ -147,7 +147,7 @@ function retrieve(program, callback){
       stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
 
-    stream.on('error', handleStreamError);
+    stream.on('error', handleStreamError.bind(stream, record));
 
     if(zipReg.test(record.url)){
       var zipdir = path.join(scratchSpace, record.name);
@@ -169,7 +169,7 @@ function retrieve(program, callback){
             if(/\/$/.test(entry.fileName)) return;
 
             zip.openReadStream(entry, function(err, readStream) {
-              if(err) return handleStreamError.call(this, err);
+              if(err) return handleStreamError.call(this, record, err);
               count++;
               var output = fs.createOutputStream(path.join(zipdir, entry.fileName));
 
@@ -216,10 +216,17 @@ function retrieve(program, callback){
   }
 
 
-  function handleStreamError(err){
+  function handleStreamError(record, err){
     if(this.unpipe) this.unpipe();
     if(this.destroy) this.destroy();
     if(this.kill) this.kill();
+    if(record._output){
+      if(program.bucket){
+        record._output.abortUpload();
+      }else{
+        fs.removeSync(record._output);
+      }
+    }
     recordCallback(err);
   }
 
@@ -252,7 +259,7 @@ function retrieve(program, callback){
     csvChild.stdin.write('{"type":"FeatureCollection","features":[');
 
     csvChild.stderr.once('data', function(data){
-      handleStreamError.call(csvChild, new Error('Error converting to csv. ' + data.toString()))
+      handleStreamError.call(csvChild, record, new Error('Error converting to csv. ' + data.toString()))
     });
 
     centroids.on('data', function(data){
@@ -280,8 +287,10 @@ function retrieve(program, callback){
 
     if(program.bucket){
       destStream = uploadStream.stream(endfile);
+      record._output = destStream;
     }else{
       destStream = fs.createWriteStream(endfile);
+      record._output = endfile;
     }
 
     pump(stream, zipStream, destStream, function(err){
