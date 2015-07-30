@@ -12,11 +12,11 @@ var maine = 'test/data/maine.json';
 test('checkHash module', function(t){
   t.plan(3);
   var stream = fs.createReadStream(maine);
-  var hash = 'f0a85b3c64f19900c47f168ea97363943ee7d83b1a3d20cc79801865046cef4d';
+  var hash = '824f3e81244489f6458578b990bab5c9f6d1ab7697f89d5485edc1640c6d82a8';
 
   checkHash(stream, hash, function(hashIsEqual, computedHash){
     t.ok(hashIsEqual, 'Computes proper hash');
-    t.equal(hash, computedHash, 'Precomputed hash equals computed hash');
+    t.equal(computedHash, hash, 'Precomputed hash equals computed hash');
   });
 
   checkHash(stream, 'wronghash', function(hashIsEqual){
@@ -159,12 +159,11 @@ test('retriever', function(t){
 });
 
 test('Ensure output', function(t){
-  t.plan(8);
+  t.plan(6);
 
   var outfiles = [
     {file: 'test/output/arkansas.csv.gz', osxhash: '2e50e44d42b2c1ab7aa22d3f1c704ee127298f409deb0a2fddbff49dfd5aebbe', ubuntuhash: '8b76792518342b0c557d5c948b8a282625936086ab7ddeaa394662dab120b1e6'},
     {file: 'test/output/maine.csv.gz', osxhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb', ubuntuhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
-    {file: 'test/output/north_carolina.csv.gz', osxhash: '94795e123dc028d643db2dba749816d17ad4b222b0d6686c44b4e406ad98bf56', ubuntuhash: '318ea9987f7f3e3208026ca589ccbd1076d6aa219c286068556d8f9fcbf0e324'},
     {file: 'test/output/sacramento.csv.gz', osxhash: '486c0dba103103fbaa87e2a74a5457a724f0ed3f0af8b6c0bdef6254752a39c4', ubuntuhash: '5106df46f78f9a9af787d4c523cbfacf05dba746e1f7a9c62723dc8caa04acf2'}
   ];
 

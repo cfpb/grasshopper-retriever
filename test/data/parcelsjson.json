@@ -8,7 +8,7 @@
       {
         "name": "Address",
         "type": "dynamic",
-        "value": "return props.STREET_NBR + ' ' + props.STREET_NAM"
+        "value": "if(props.STREET_NBR && props.STREET_NAM){return props.STREET_NBR + ' ' + props.STREET_NAM }else{ throw new Error('Empty fields.')}"
       },
       {
         "name": "City",
