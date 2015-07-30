@@ -222,7 +222,9 @@ function retrieve(program, callback){
     if(this.kill) this.kill();
     if(record._output){
       if(program.bucket){
-        record._output.abortUpload();
+        record._output.abortUpload(function(err){
+          if(err) logger.error(err);
+        });
       }else{
         fs.removeSync(record._output);
       }
