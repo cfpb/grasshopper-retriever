@@ -15,6 +15,7 @@ var csvToVrt = require('csv-to-vrt');
 var centroidStream = require('centroid-stream');
 var UploadStream = require('./lib/UploadStream');
 var checkHash = require('./lib/checkHash');
+var fieldFilter = require('./lib/fieldFilter');
 
 var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
@@ -158,10 +159,10 @@ function retrieve(program, callback){
         if(csvReg.test(record.file)){
           csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
             if(err) return recordCallback(err);
-            handleStream(spawnOgr(vrt), record);
+            handleStream(spawnOgr(record, vrt), record);
           });
         }else{
-          handleStream(spawnOgr(unzipped), record);
+          handleStream(spawnOgr(record, unzipped), record);
         }
       })
       .on('error', handleStreamError);
@@ -175,12 +176,12 @@ function retrieve(program, callback){
 
           csvToVrt(csv, record.sourceSrs, function(err, vrt){
             if(err) return recordCallback(err);
-            handleStream(spawnOgr(vrt), record);
+            handleStream(spawnOgr(record, vrt), record);
           });
         });
 
       }else{
-        handleStream(spawnOgr(null, stream), record);
+        handleStream(spawnOgr(record, null, stream), record);
       }
     }
   }
@@ -194,7 +195,7 @@ function retrieve(program, callback){
   }
 
 
-  function spawnOgr(file, stream){
+  function spawnOgr(record, file, stream){
     var jsonChild;
 
     if(stream){
@@ -205,7 +206,6 @@ function retrieve(program, callback){
     }
 
     var csvChild = spawn('ogr2ogr', ['-f', 'CSV', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
-    var ogrJsonStream = OgrJsonStream();
     var centroids = centroidStream.stringify();
 
     jsonChild.stderr.on('data', function(errorText){
@@ -216,7 +216,7 @@ function retrieve(program, callback){
       csvChild.stdout.emit('error', errorText);
     });
 
-    pump(jsonChild.stdout, ogrJsonStream, centroids, function(){
+    pump(jsonChild.stdout, OgrJsonStream(), fieldFilter(record.fields), centroids, function(){
       csvChild.stdin.end(']}');
     });
 
