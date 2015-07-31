@@ -56,8 +56,65 @@ test('uploadStream module', function(t){
     t.pass('Errors on uploading to bad bucket.');
   });
 
+});
+
+
+test('fieldFilter module', function(t){
+  t.plan(4);
+
+  var ncmeta = fs.readJsonFileSync('test/data/ncmeta.json');
+  var count = 0;
+
+  var cases = {
+    "no_fields": {
+      stream: fieldFilter(ncmeta.fields),
+      collection: [],
+      count: 0
+    },
+    "empty_fields": {
+      stream: fieldFilter(ncmeta.fields),
+      collection: [],
+      count: 0
+    },
+    "spotty_fields": {
+      stream: fieldFilter(ncmeta.fields),
+      collection: [],
+      count: 3
+    }
+  }
+
+  var noFields = fs.readJsonFileSync('test/data/no_fields.json');
+  var emptyFields = fs.readJsonFileSync('test/data/empty_fields.json');
+  var nc = fs.readJsonFileSync('test/data/fields/north_carolina.json');
+
+  Object.keys(cases).forEach(function(v){
+    var currCase = cases[v];
+    currCase.stream.on('data', function(data){
+      currCase.collection.push(data);
+    });
+
+    currCase.stream.on('end', function(){
+      t.equal(currCase.collection.length, currCase.count, 'Got expected number of records.');
+      after(++count);
+    })
+  });
+
+  cases.no_fields.stream.end(noFields);
+  cases.empty_fields.stream.end(emptyFields);
+  cases.spotty_fields.stream.write(nc);
+  cases.spotty_fields.stream.write(emptyFields);
+  cases.spotty_fields.stream.write(nc);
+  cases.spotty_fields.stream.write(nc);
+  cases.spotty_fields.stream.end(noFields);
+
+  function after(count){
+    if(count===3){
+      t.pass('Processed all files without error.');
+    }
+  }
 
 });
+
 
 test('retriever', function(t){
 
@@ -215,6 +272,5 @@ test('Field tests', function(t){
 
     fieldStream.end(fieldFiles[source.name]);
   });
-
 
 });
