@@ -31,7 +31,7 @@
     "centroid-stream": "^0.3.0",
     "commander": "^2.8.1",
     "csv-to-vrt": "0.0.2",
-    "end-of-stream": "https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.1.0.tgz",
+    "end-of-stream": "^1.1.0",
     "fs-extra": "^0.18.4",
     "ftp": "^0.3.10",
     "ogr-json-stream": "^0.1.0",
