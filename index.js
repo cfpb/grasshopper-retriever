@@ -1,7 +1,10 @@
 var fs = require('fs-extra');
 var path = require('path');
+var url = require('url');
 var spawn = require('child_process').spawn;
-var hyperquest = require('hyperquest');
+var pump = require('pump');
+var request = require('request');
+var ftp = require('ftp');
 var zlib = require('zlib');
 var unzip = require('unzip');
 var csvToVrt = require('csv-to-vrt');
@@ -15,31 +18,28 @@ var restrictedReg = /\.\.|\//;
 
 function retrieve(program, callback){
 
-  var scratchSpace = 'retriever-scratch' + Math.random()*1e17;
-  fs.mkdirSync(scratchSpace);
+  var scratchSpace = 'scratch/' + Math.random()*1e17;
+  fs.mkdirsSync(scratchSpace);
 
 
   function wrappedCb(err, count){
-    var args = arguments;
-    var self = this;
-
     fs.remove(scratchSpace, function(e){
       if(err||e){
-       if(callback) return callback(err||e);
-       throw err||e;
+        if(callback) return callback(err||e);
+        throw err||e;
       }
 
-      if(callback) callback.apply(self, args);
+      if(callback) callback(err, count);
     });
   }
 
+  if(!program.file) return wrappedCb(new Error('Must provide a metadata file with the -f option.'));
 
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
   var restrictedFound = 0;
-  
-  var uploadStream;
 
+  var uploadStream;
   var data;
 
   try{
@@ -58,8 +58,7 @@ function retrieve(program, callback){
   }
 
 
-  if(program.bucket) uploadStream = UploadStream(program.bucket, program.profile) 
-
+  if(program.bucket) uploadStream = new UploadStream(program.bucket, program.profile);
 
   data.forEach(function(record){
 
@@ -71,7 +70,7 @@ function retrieve(program, callback){
 
     if(restrictedFound) return;
 
-    //If the record is filtered, remove it from the count 
+    //If the record is filtered, remove it from the count
     if(stringMatch && record.name.indexOf(program.match) === -1 ||
        regMatch && !program.match.test(record.name)
     ){
@@ -81,87 +80,105 @@ function retrieve(program, callback){
        return recordCount;
     }
 
-    var request = hyperquest(record.url);
-    
-    request.on('error', recordCallback);
+    var urlObj = url.parse(record.url);
+    if(urlObj.protocol === 'ftp:'){
+      var ftpClient = new ftp();
+      ftpClient.on('ready', function(){
+        ftpClient.get(urlObj.path, function(err, stream){
+          if(err) return recordCallback(err);
+          stream.on('end', function(){
+            ftpClient.end();
+          });
+          processRequest(stream, record);
+        });
+      });
+      ftpClient.connect({host: urlObj.hostname});
+    }else{
+      processRequest(request(record.url), record);
+    }
+  });
 
-    checkHash(request, record.hash, function(hashIsEqual, remoteHash){
-      if(hashIsEqual) return; 
-      request.unpipe();
-      request.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
+
+  function processRequest(stream, record){
+    checkHash(stream, record.hash, function(hashIsEqual, remoteHash){
+      if(hashIsEqual){
+        console.log('Remote file verified.');
+        return;
+      }
+      if(stream.unpipe) stream.unpipe();
+      if(stream.destroy) stream.destroy();
+      stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
 
-    if(zipReg.test(record.url)){
-      request.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
-        .on('close', function(){
-          var unzipped = path.join(scratchSpace, record.name, record.file)
+    stream.on('error', recordCallback);
 
-          if(csvReg.test(record.file)){
-            csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
-              handleStream(spawnOgr(vrt), record, recordCallback);
-            });
-          }else{
-            handleStream(spawnOgr(unzipped), record, recordCallback);
-          }
-        });
+    if(zipReg.test(record.url)){
+      //unzip stream can't be pumped
+      stream.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
+       .on('close', function(){
+
+        var unzipped = path.join(scratchSpace, record.name, record.file);
+
+        if(csvReg.test(record.file)){
+          csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
+            if(err) return recordCallback(err);
+            handleStream(spawnOgr(vrt), record, recordCallback);
+          });
+        }else{
+          handleStream(spawnOgr(unzipped), record, recordCallback);
+        }
+      })
+      .on('error', recordCallback);
     }else{
       if(csvReg.test(record.file)){
         var csv = path.join(scratchSpace, record.file);
         var csvStream = fs.createWriteStream(csv);
 
-        csvStream.on('finish', function(err){
+        pump(stream, csvStream, function(err){
           if(err) return recordCallback(err);
 
           csvToVrt(csv, record.sourceSrs, function(err, vrt){
             if(err) return recordCallback(err);
-
             handleStream(spawnOgr(vrt), record, recordCallback);
           });
         });
 
-        request.pipe(csvStream);
       }else{
-        handleStream(spawnOgr(null, request), record, recordCallback);
+        handleStream(spawnOgr(null, stream), record, recordCallback);
       }
     }
-  });
-
+  }
 
   function spawnOgr(file, stream){
-    var child; 
+    var child;
+
     if(stream){
-      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/'])
-      stream.pipe(child.stdin);
+      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
+      pump(stream, child.stdin);
     }else{
-      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', file])
+      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', file]);
     }
     return child.stdout;
   }
 
 
   function handleStream(stream, record, cb){
-    if(!cb) cb = function(err){if(err) wrappedCb(err);};
+    if(!cb) cb = function(err){if(err) wrappedCb(err)}
 
     var endfile = path.join(program.directory, record.name + '.csv.gz');
     var zipStream = zlib.createGzip();
-    
-    stream.on('error', function(err){
-      this.unpipe();
-      cb(err);
-    })
-
-    stream.pipe(zipStream);
+    var destStream;
 
     if(program.bucket){
-      return uploadStream.stream(zipStream, endfile, cb);
+      destStream = uploadStream.stream(endfile);
+    }else{
+      destStream = fs.createWriteStream(endfile);
     }
 
-    zipStream.pipe(fs.createWriteStream(endfile))
-      .on('finish', cb)
-      .on('error', function(err){
-        this.unpipe();
-        cb(err); 
-      })
+    pump(stream, zipStream, destStream, function(err){
+      if(err) return cb(err);
+      cb();
+    });
   }
 
 
