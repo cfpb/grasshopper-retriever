@@ -1,11 +1,13 @@
 var test = require('tape');
-var fs = require('fs');
-var os = require('os');
+var fs = require('fs-extra');
+var path = require('path');
+var util = require('util');
 var pump = require('pump');
 var spawn = require('child_process').spawn;
 var retriever = require('../index');
 var checkHash = require('../lib/checkHash');
 var UploadStream = require('../lib/UploadStream');
+var fieldFilter = require('../lib/fieldFilter');
 
 var maine = 'test/data/maine.json';
 
@@ -183,4 +185,36 @@ test('Ensure output', function(t){
 
     });
   }
+});
+
+
+test('Field tests', function(t){
+  var data = fs.readJsonSync('data.json');
+  var fieldFiles = {};
+
+  t.plan(data.length*5);
+
+  fs.readdirSync('test/data/fields')
+    .filter(function(v){return v[0] !== '.'})
+    .forEach(function(v){fieldFiles[path.basename(v, '.json')] = fs.readJsonSync(path.join('test/data/fields', v))});
+
+  data.forEach(function(source){
+    var fieldStream = fieldFilter(source.fields);
+
+    var rawField = fieldFiles[source.name];
+
+    t.ok(rawField, util.format('A test record exists in test/data/fields for %s', source.name));
+
+    fieldStream.on('data', function(data){
+      var props = data.properties;
+      t.ok(props.Address, util.format('%s generates address', source.name));
+      t.ok(props.City, util.format('%s generates city', source.name));
+      t.ok(props.State, util.format('%s generates state', source.name));
+      t.ok(props.Zip, util.format('%s generates zip', source.name));
+    });
+
+    fieldStream.end(fieldFiles[source.name]);
+  });
+
+
 });
