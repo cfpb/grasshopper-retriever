@@ -59,10 +59,16 @@ test('uploadStream module', function(t){
 
 test('retriever', function(t){
 
-  t.plan(30);
+  t.plan(31);
 
   retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(errs){
     t.equal(errs.length, 1, 'Errors on bad file and no bucket.');
+  });
+
+  retriever({quiet: true, profile: 'noprofilepresentfakeprofile', 'bucket': 'wyatt-test', file: maine}, function(errs){
+    var errLen = 1;
+    if(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) errLen = 0;
+    t.equal(errs.length, errLen, 'Errors on bad profile, only without environment variables set.');
   });
 
   retriever({quiet: true, profile: 'default', directory: '.', file: ''}, function(errs){
