@@ -59,7 +59,7 @@ test('uploadStream module', function(t){
 
 test('retriever', function(t){
 
-  t.plan(31);
+  t.plan(27);
 
   retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(errs){
     t.equal(errs.length, 1, 'Errors on bad file and no bucket.');
@@ -136,16 +136,6 @@ test('retriever', function(t){
     t.equal(processedRecords.length, 2, 'Loads data after parent dir error.');
   });
 
-  retriever({match: 'maineerr, arkansaserr', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(errs, processedRecords){
-    t.equal(errs.length, 0, 'No error on filtered file.')
-    t.equal(processedRecords.length, 2, 'Loads data after filter.');
-  });
-
-  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/parcelsjson.json'}, function(errs, processedRecords){
-    t.equal(errs.length, 0, 'No error on converted parcels.')
-    t.equal(processedRecords.length, 1, 'Loads data from parcels');
-  });
-
   spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', maine])
     .on('exit', function(code){
       t.equal(code, 0, 'Loads via cli');
@@ -159,22 +149,39 @@ test('retriever', function(t){
 });
 
 test('Ensure output', function(t){
-  t.plan(6);
+  t.plan(10);
+  var count = 0;
 
-  var outfiles = [
-    {file: 'test/output/arkansas.csv.gz', osxhash: '2e50e44d42b2c1ab7aa22d3f1c704ee127298f409deb0a2fddbff49dfd5aebbe', ubuntuhash: '8b76792518342b0c557d5c948b8a282625936086ab7ddeaa394662dab120b1e6'},
-    {file: 'test/output/maine.csv.gz', osxhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb', ubuntuhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
-    {file: 'test/output/sacramento.csv.gz', osxhash: '486c0dba103103fbaa87e2a74a5457a724f0ed3f0af8b6c0bdef6254752a39c4', ubuntuhash: '5106df46f78f9a9af787d4c523cbfacf05dba746e1f7a9c62723dc8caa04acf2'}
-  ];
-
-  outfiles.forEach(function(obj){
-    var stream = fs.createReadStream(obj.file);
-    var hash = os.platform() === 'darwin' ? 'osxhash' : 'ubuntuhash';
-
-    checkHash(stream, obj[hash], function(hashIsEqual, computedHash){
-      t.ok(hashIsEqual, 'Computes proper hash');
-      t.equal(obj[hash], computedHash, 'Precomputed hash equals computed hash');
-    });
-
+ retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/parcelsjson.json'}, function(errs, processedRecords){
+    t.equal(errs.length, 0, 'No error on converted parcels.')
+    t.equal(processedRecords.length, 1, 'Loads data from parcels');
+    ensure(++count);
   });
+
+  retriever({match: 'maine, arkansas', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(errs, processedRecords){
+    t.equal(errs.length, 0, 'No error on filtered file.')
+    t.equal(processedRecords.length, 2, 'Loads data after filter.');
+    ensure(++count);
+  });
+
+  function ensure(count){
+    if(count < 2) return;
+
+    var outfiles = [
+      {file: 'test/output/arkansas.csv.gz', osxhash: '38af547a0147a0934f63bda7a4b6614e4b0bc4defca1ecd7eed9e4303fa7af59', ubuntuhash: '8b76792518342b0c557d5c948b8a282625936086ab7ddeaa394662dab120b1e6'},
+      {file: 'test/output/maine.csv.gz', osxhash: '1af6790085e15625392157c2187a6e6624eaa3c1d856ee8531fe1873fe7548e7', ubuntuhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
+      {file: 'test/output/sacramento.csv.gz', osxhash: '7f1be41d92041b0d5714fcb1f65a58d87efa3bb46681aa0c5160e7ff7701ae85', ubuntuhash: '5106df46f78f9a9af787d4c523cbfacf05dba746e1f7a9c62723dc8caa04acf2'}
+    ];
+
+    outfiles.forEach(function(obj){
+      var stream = fs.createReadStream(obj.file);
+      var hash = os.platform() === 'darwin' ? 'osxhash' : 'ubuntuhash';
+
+      checkHash(stream, obj[hash], function(hashIsEqual, computedHash){
+        t.ok(hashIsEqual, 'Computes proper hash');
+        t.equal(computedHash, obj[hash], 'Precomputed hash equals computed hash');
+      });
+
+    });
+  }
 });
