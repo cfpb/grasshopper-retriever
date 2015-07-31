@@ -3,7 +3,14 @@
 'use strict';
 
 var program = require('commander');
+var winston = require('winston');
 var retriever = require('./index');
+
+var logger = new winston.Logger({
+    transports: [
+      new (winston.transports.Console)()
+    ]
+  });
 
 program
   .version('0.0.1')
@@ -15,17 +22,21 @@ program
   .option('-q --quiet', 'Suppress logging.', false)
   .parse(process.argv);
 
+if(program.quiet){
+  logger.remove(winston.transports.Console);
+}
+
 retriever(program, function(errs, retrieved){
 
   if(!program.bucket && !program.directory){
-    console.log('%d source%s still fresh, %d source%s need updates',
+    logger.info('%d source%s still fresh, %d source%s need updates',
       retrieved.length,
       retrieved.length === 1 ? '' : 's',
       errs.length,
       errs.length ===1 ? '' : 's'
     );
   }else{
-    console.log('Fetched %d source%s and placed %s in %s%s',
+    logger.info('Fetched %d source%s and placed %s in %s%s',
       retrieved.length,
       retrieved.length === 1 ? '' : 's',
       retrieved.length === 1 ? 'it' : 'them',
