@@ -30,12 +30,14 @@
     "aws-sdk": "^2.1.31",
     "commander": "^2.8.1",
     "csv-to-vrt": "0.0.2",
+    "end-of-stream": "^1.1.0",
     "fs-extra": "^0.18.4",
     "ftp": "^0.3.10",
     "pump": "^1.0.0",
     "request": "^2.58.0",
     "s3-upload-stream": "git://github.com/wpears/s3-upload-stream.git#end-override",
     "tape": "^4.0.0",
-    "unzip": "^0.1.11"
+    "unzip": "^0.1.11",
+    "winston": "^1.0.1"
   }
 }
