@@ -5,17 +5,21 @@ var url = require('url');
 var spawn = require('child_process').spawn;
 var winston = require('winston');
 var pump = require('pump');
+var eos = require('end-of-stream');
 var request = require('request');
+var OgrJsonStream = require('ogr-json-stream');
 var ftp = require('ftp');
 var zlib = require('zlib');
-var unzip = require('unzip');
+var yauzl = require('yauzl');
 var csvToVrt = require('csv-to-vrt');
+var centroidStream = require('centroid-stream');
 var UploadStream = require('./lib/UploadStream');
 var checkHash = require('./lib/checkHash');
 
 var zipReg = /.zip$/i;
 var csvReg = /(?:txt|csv)$/i;
 var restrictedReg = /\.\.|\//;
+var comma = new Buffer(',');
 
 
 function retrieve(program, callback){
@@ -104,21 +108,29 @@ function retrieve(program, callback){
     }
 
     var urlObj = url.parse(record.url);
+
     if(urlObj.protocol === 'ftp:'){
+
       var ftpClient = new ftp();
+
       ftpClient.on('ready', function(){
         ftpClient.get(urlObj.path, function(err, stream){
+
           if(err){
             ftpClient.end();
             return recordCallback(err);
           }
-          stream.on('end', function(){
+
+          eos(stream, function(){
             ftpClient.end();
           });
+
           processRequest(stream, record);
         });
       });
+
       ftpClient.connect({host: urlObj.hostname});
+
     }else{
       processRequest(request(record.url), record);
     }
@@ -137,22 +149,51 @@ function retrieve(program, callback){
     stream.on('error', handleStreamError);
 
     if(zipReg.test(record.url)){
-      //unzip stream can't be pumped
-      stream.pipe(unzip.Extract({path: path.join(scratchSpace, record.name)}))
-       .on('close', function(){
+      var zipdir = path.join(scratchSpace, record.name);
+      var zipfile = zipdir + '.zip';
 
-        var unzipped = path.join(scratchSpace, record.name, record.file);
+      pump(stream, fs.createWriteStream(zipfile), function(err){
+        if(err) return stream.emit('error', err);
 
-        if(csvReg.test(record.file)){
-          csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
-            if(err) return recordCallback(err);
-            handleStream(spawnOgr(vrt), record);
+        yauzl.open(zipfile, function(err, zip){
+          if(err) return recordCallback(err);
+          var entriesFinished = 0;
+          var count = 0;
+
+          zip.on('end', function(){
+            entriesFinished = 1;
           });
-        }else{
-          handleStream(spawnOgr(unzipped), record);
-        }
-      })
-      .on('error', handleStreamError);
+
+          zip.on('entry', function(entry){
+            if(/\/$/.test(entry.fileName)) return;
+
+            zip.openReadStream(entry, function(err, readStream) {
+              if(err) return handleStreamError.call(this, err);
+              count++;
+              var output = fs.createOutputStream(path.join(zipdir, entry.fileName));
+
+              pump(readStream, output, function(err){
+                if(err) return recordCallback(err);
+                count--;
+                if(entriesFinished && !count){
+                  var unzipped = path.join(zipdir, record.file);
+
+                  if(csvReg.test(record.file)){
+
+                    csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
+                      if(err) return recordCallback(err);
+                      handleStream(spawnOgr(vrt), record);
+                    });
+
+                  }else{
+                    handleStream(spawnOgr(unzipped), record);
+                  }
+                }
+              });
+            });
+          });
+        });
+      });
     }else{
       if(csvReg.test(record.file)){
         var csv = path.join(scratchSpace, record.file);
@@ -177,24 +218,62 @@ function retrieve(program, callback){
   function handleStreamError(err){
     if(this.unpipe) this.unpipe();
     if(this.destroy) this.destroy();
+    if(this.kill) this.kill();
     recordCallback(err);
   }
 
 
   function spawnOgr(file, stream){
-    var child;
+    var jsonChild;
 
     if(stream){
-      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
-      pump(stream, child.stdin);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', '/vsistdin/']);
+      pump(stream, jsonChild.stdin);
     }else{
-      child = spawn('ogr2ogr', ['-f', 'CSV', '-t_srs', 'WGS84', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', file]);
+      jsonChild = spawn('ogr2ogr', ['-f', 'GeoJSON', '-t_srs', 'WGS84', '/vsistdout/', file]);
     }
-    return child.stdout;
+
+    var csvChild = spawn('ogr2ogr', ['-f', 'CSV', '-lco', 'GEOMETRY=AS_XY', '/vsistdout/', '/vsistdin/']);
+    var ogrJsonStream = OgrJsonStream();
+    var centroids = centroidStream.stringify();
+
+    jsonChild.stderr.on('data', function(errorText){
+      jsonChild.stdout.emit('error', errorText);
+    });
+
+    csvChild.stderr.on('data', function(errorText){
+      csvChild.stdout.emit('error', errorText);
+    });
+
+    pump(jsonChild.stdout, ogrJsonStream, centroids, function(){
+      csvChild.stdin.end(']}');
+    });
+
+    csvChild.stdin.write('{"type":"FeatureCollection","features":[');
+
+    csvChild.stderr.once('data', function(data){
+      handleStreamError.call(csvChild, new Error('Error converting to csv. ' + data.toString()))
+    });
+
+    centroids.on('data', function(data){
+      csvChild.stdin.write(Buffer.concat([data, comma]));
+    });
+
+    return csvChild.stdout;
   }
 
 
   function handleStream(stream, record){
+    if(!program.bucket && !program.directory){
+      return eos(stream, function(err){
+        recordCallback(err);
+      });
+    }
+
+    if(program.bucket && !program.directory){
+      program.directory = '.';
+    }
+
     var endfile = path.join(program.directory, record.name + '.csv.gz');
     var zipStream = zlib.createGzip();
     var destStream;
@@ -209,7 +288,6 @@ function retrieve(program, callback){
       recordCallback(err);
     });
   }
-
 
 }
 
