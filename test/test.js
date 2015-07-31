@@ -168,18 +168,17 @@ test('Ensure output', function(t){
     if(count < 2) return;
 
     var outfiles = [
-      {file: 'test/output/arkansas.csv.gz', osxhash: '38af547a0147a0934f63bda7a4b6614e4b0bc4defca1ecd7eed9e4303fa7af59', ubuntuhash: '8b76792518342b0c557d5c948b8a282625936086ab7ddeaa394662dab120b1e6'},
-      {file: 'test/output/maine.csv.gz', osxhash: '1af6790085e15625392157c2187a6e6624eaa3c1d856ee8531fe1873fe7548e7', ubuntuhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
-      {file: 'test/output/sacramento.csv.gz', osxhash: '7f1be41d92041b0d5714fcb1f65a58d87efa3bb46681aa0c5160e7ff7701ae85', ubuntuhash: '5106df46f78f9a9af787d4c523cbfacf05dba746e1f7a9c62723dc8caa04acf2'}
+      {file: 'test/output/arkansas.csv.gz', hash: '38af547a0147a0934f63bda7a4b6614e4b0bc4defca1ecd7eed9e4303fa7af59'},
+      {file: 'test/output/maine.csv.gz', hash: '1af6790085e15625392157c2187a6e6624eaa3c1d856ee8531fe1873fe7548e7'},
+      {file: 'test/output/sacramento.csv.gz', hash: '7f1be41d92041b0d5714fcb1f65a58d87efa3bb46681aa0c5160e7ff7701ae85'}
     ];
 
     outfiles.forEach(function(obj){
       var stream = fs.createReadStream(obj.file);
-      var hash = os.platform() === 'darwin' ? 'osxhash' : 'ubuntuhash';
 
-      checkHash(stream, obj[hash], function(hashIsEqual, computedHash){
+      checkHash(stream, obj.hash, function(hashIsEqual, computedHash){
         t.ok(hashIsEqual, 'Computes proper hash');
-        t.equal(computedHash, obj[hash], 'Precomputed hash equals computed hash');
+        t.equal(computedHash, obj.hash, 'Precomputed hash equals computed hash');
       });
 
     });
