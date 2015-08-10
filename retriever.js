@@ -26,7 +26,9 @@ if(program.quiet){
   logger.remove(winston.transports.Console);
 }
 
-retriever(program, function(errs, retrieved){
+retriever(program, function(output){
+  var retrieved = output.retrieved;
+  var errs = output.errors;
 
   if(!program.bucket && !program.directory){
     logger.info('%d source%s still fresh, %d source%s need updates',
