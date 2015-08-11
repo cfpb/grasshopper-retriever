@@ -1,6 +1,7 @@
 var fs = require('fs-extra');
 var util = require('util');
 var path = require('path');
+var crypto = require('crypto');
 var url = require('url');
 var spawn = require('child_process').spawn;
 var winston = require('winston');
@@ -36,7 +37,7 @@ function retrieve(program, callback){
     location: ''
   };
 
-  var scratchSpace = 'scratch/' + Math.random()*1e17;
+  var scratchSpace = 'scratch/' + crypto.pseudoRandomBytes(10).toString('hex');
   fs.mkdirsSync(scratchSpace);
 
 
