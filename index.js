@@ -150,8 +150,11 @@ function retrieve(program, callback){
     checkHash(stream, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual){
         logger.info('Remote file for %s verified.', record.name);
+        record._retrieverVerified = 1;
         output.fresh.push(record.name);
-        if(monitoringMode) return recordCallback(null, record);
+
+        //if no output or stream has already completed
+        if(monitoringMode || record._retrieverProcessed) return recordCallback(null, record);
         return;
       }
       output.stale.push(record.name);
@@ -233,13 +236,13 @@ function retrieve(program, callback){
     if(this.unpipe) this.unpipe();
     if(this.destroy) this.destroy();
     if(this.kill) this.kill();
-    if(record._output){
+    if(record._retrieverOutput){
       if(program.bucket){
-        record._output.abortUpload(function(err){
+        record._retrieverOutput.abortUpload(function(err){
           if(err) logger.error(err);
         });
       }else{
-        fs.removeSync(record._output);
+        fs.removeSync(record._retrieverOutput);
       }
     }
     recordCallback(err, record);
@@ -297,17 +300,21 @@ function retrieve(program, callback){
 
     if(program.bucket){
       destStream = uploadStream.stream(endfile);
-      record._output = destStream;
+      record._retrieverOutput = destStream;
       output.location = program.bucket + '/' + program.directory;
     }else{
       destStream = fs.createWriteStream(endfile);
-      record._output = endfile;
+      record._retrieverOutput = endfile;
       output.location= program.directory;
     }
 
     pump(stream, zipStream, destStream, function(err){
-      output.retrieved.push(record.name);
-      recordCallback(err, record);
+      if(!err){
+        output.retrieved.push(record.name);
+        record._retrieverProcessed = 1;
+      }
+
+      if(err||record._retrieverVerified) return recordCallback(err, record);
     });
   }
 
