@@ -27,23 +27,31 @@ if(program.quiet){
 }
 
 retriever(program, function(output){
-  var retrieved = output.retrieved;
-  var errs = output.errors;
+  logger.info('%d error%s encountered.',
+    output.errors.length,
+    output.errors.length === 1 ? '' : 's'
+  );
+
+  output.errors.forEach(function(v, i){
+    logger.error(v);
+    output.errors[i] = v.toString();
+  });
 
   if(!program.bucket && !program.directory){
-    logger.info('%d source%s still fresh, %d source%s need updates',
-      retrieved.length,
-      retrieved.length === 1 ? '' : 's',
-      errs.length,
-      errs.length ===1 ? '' : 's'
+    logger.info('%d source%s still fresh, %d source%s need updates.',
+      output.fresh.length,
+      output.fresh.length === 1 ? '' : 's',
+      output.stale.length,
+      output.stale.length === 1 ? '' : 's'
     );
   }else{
-    logger.info('Fetched %d source%s and placed %s in %s%s',
-      retrieved.length,
-      retrieved.length === 1 ? '' : 's',
-      retrieved.length === 1 ? 'it' : 'them',
-      program.bucket ? program.bucket + '/' : '',
-      program.directory ? program.directory : ''
+    logger.info('Fetched %d source%s and placed %s in %s.',
+      output.retrieved.length,
+      output.retrieved.length === 1 ? '' : 's',
+      output.retrieved.length === 1 ? 'it' : 'them',
+      output.location
     );
   }
+
+  console.log(JSON.stringify(output));
 });

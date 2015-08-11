@@ -32,7 +32,8 @@ function retrieve(program, callback){
     processed: [],
     retrieved: [],
     startTime: Date.now(),
-    endTime: null
+    endTime: null,
+    location: ''
   };
 
   var scratchSpace = 'scratch/' + Math.random()*1e17;
@@ -61,13 +62,7 @@ function retrieve(program, callback){
 
     output.endTime = Date.now();
 
-    if(output.errors.length){
-      logger.error('Encountered %d error%s whilst retrieving.', output.errors.length, output.errors.length > 1 ? 's' : '');
-      output.errors.forEach(function(v){
-        logger.error(v);
-      });
-      if(!callback) throw output.errors.join('\n');
-    }
+    if(output.errors.length && !callback) throw output.errors.join('\n');
 
     if(callback) callback(output);
   }
@@ -96,7 +91,7 @@ function retrieve(program, callback){
       output.errors.push(err);
       recordCount--;
     }else{
-      output.processed.push(record);
+      output.processed.push(record.name);
     }
     if(output.processed.length === recordCount) wrappedCb(null);
   }
@@ -155,11 +150,11 @@ function retrieve(program, callback){
     checkHash(stream, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual){
         logger.info('Remote file for %s verified.', record.name);
-        output.fresh.push(record);
+        output.fresh.push(record.name);
         if(monitoringMode) return recordCallback(null, record);
         return;
       }
-      output.stale.push(record);
+      output.stale.push(record.name);
       stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
 
@@ -303,13 +298,15 @@ function retrieve(program, callback){
     if(program.bucket){
       destStream = uploadStream.stream(endfile);
       record._output = destStream;
+      output.location = program.bucket + '/' + program.directory;
     }else{
       destStream = fs.createWriteStream(endfile);
       record._output = endfile;
+      output.location= program.directory;
     }
 
     pump(stream, zipStream, destStream, function(err){
-      output.retrieved.push(record);
+      output.retrieved.push(record.name);
       recordCallback(err, record);
     });
   }
