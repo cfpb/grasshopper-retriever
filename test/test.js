@@ -118,7 +118,7 @@ test('fieldFilter module', function(t){
 
 test('retriever', function(t){
 
-  t.plan(27);
+  t.plan(34);
 
   retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(output){
     t.equal(output.errors.length, 1, 'Errors on bad file and no bucket.');
@@ -153,11 +153,13 @@ test('retriever', function(t){
   retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine}, function(output){
     t.equal(output.errors.length, 0, 'No error on good file and bucket.');
     t.equal(output.processed.length, 1, 'Loads data from the test dataset to bucket.');
+    t.equal(output.location, 'wyatt-test/.', 'Keeps track of location, including bucket.');
   });
 
   retriever({quiet: true, profile: 'default', directory: 'test/output', file: maine}, function(output){
     t.equal(output.errors.length, 0, 'No error on good file.');
     t.equal(output.processed.length, 1, 'Loads data from test data locally.');
+    t.equal(output.location, 'test/output', 'Keeps track of location, including bucket.');
   });
 
   retriever({quiet: true, bucket: 'wyatt-test', profile: 'default', directory: '.', file: maine, match: 'maine'}, function(output){
@@ -187,12 +189,17 @@ test('retriever', function(t){
 
   retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(output){
     t.equal(output.errors.length, 1, 'Hash error from file with hash error.')
-    t.equal(output.processed.length, 2, 'Loads data after hash error.');
+    t.equal(output.processed.length, 3, 'Processes errors and successes alike.');
+    t.equal(output.retrieved.length, 2, 'Loads data after hash error.');
+    t.equal(output.stale.length, 1, 'Singles out stale data');
+    t.equal(output.fresh.length, 2, 'Gets fresh data');
   });
 
   retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkandparenterr.json'}, function(output){
     t.equal(output.errors.length, 1, 'Parent dir error');
-    t.equal(output.processed.length, 2, 'Loads data after parent dir error.');
+    t.equal(output.processed.length, 3, 'Processes errors and successes alike.');
+    t.equal(output.retrieved.length, 2, 'Loads data after parent dir error.');
+    t.equal(output.fresh.length, 2, 'Gets fresh data');
   });
 
   spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', maine])
