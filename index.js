@@ -86,12 +86,13 @@ function retrieve(program, callback){
   var recordCount = data.length;
 
   function recordCallback(err, record){
+    output.processed.push(record.name);
+
     if(err){
       logger.error(err);
       output.errors.push(err);
-      recordCount--;
     }else{
-      output.processed.push(record.name);
+      output.retrieved.push(record.name);
     }
     if(output.processed.length === recordCount) wrappedCb(null);
   }
@@ -309,11 +310,7 @@ function retrieve(program, callback){
     }
 
     pump(stream, zipStream, destStream, function(err){
-      if(!err){
-        output.retrieved.push(record.name);
-        record._retrieverProcessed = 1;
-      }
-
+      if(!err) record._retrieverProcessed = 1;
       if(err||record._retrieverVerified) return recordCallback(err, record);
     });
   }
