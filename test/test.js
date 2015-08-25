@@ -1,22 +1,24 @@
 var test = require('tape');
-var fs = require('fs');
-var os = require('os');
+var fs = require('fs-extra');
+var path = require('path');
+var util = require('util');
 var pump = require('pump');
 var spawn = require('child_process').spawn;
 var retriever = require('../index');
 var checkHash = require('../lib/checkHash');
 var UploadStream = require('../lib/UploadStream');
+var fieldFilter = require('../lib/fieldFilter');
 
 var maine = 'test/data/maine.json';
 
 test('checkHash module', function(t){
   t.plan(3);
   var stream = fs.createReadStream(maine);
-  var hash = 'f0a85b3c64f19900c47f168ea97363943ee7d83b1a3d20cc79801865046cef4d';
+  var hash = '824f3e81244489f6458578b990bab5c9f6d1ab7697f89d5485edc1640c6d82a8';
 
   checkHash(stream, hash, function(hashIsEqual, computedHash){
     t.ok(hashIsEqual, 'Computes proper hash');
-    t.equal(hash, computedHash, 'Precomputed hash equals computed hash');
+    t.equal(computedHash, hash, 'Precomputed hash equals computed hash');
   });
 
   checkHash(stream, 'wronghash', function(hashIsEqual){
@@ -54,12 +56,69 @@ test('uploadStream module', function(t){
     t.pass('Errors on uploading to bad bucket.');
   });
 
+});
+
+
+test('fieldFilter module', function(t){
+  t.plan(4);
+
+  var ncmeta = fs.readJsonFileSync('test/data/ncmeta.json');
+  var count = 0;
+
+  var cases = {
+    "no_fields": {
+      stream: fieldFilter(ncmeta.fields),
+      collection: [],
+      count: 0
+    },
+    "empty_fields": {
+      stream: fieldFilter(ncmeta.fields),
+      collection: [],
+      count: 0
+    },
+    "spotty_fields": {
+      stream: fieldFilter(ncmeta.fields),
+      collection: [],
+      count: 3
+    }
+  }
+
+  var noFields = fs.readJsonFileSync('test/data/no_fields.json');
+  var emptyFields = fs.readJsonFileSync('test/data/empty_fields.json');
+  var nc = fs.readJsonFileSync('test/data/fields/north_carolina.json');
+
+  Object.keys(cases).forEach(function(v){
+    var currCase = cases[v];
+    currCase.stream.on('data', function(data){
+      currCase.collection.push(data);
+    });
+
+    currCase.stream.on('end', function(){
+      t.equal(currCase.collection.length, currCase.count, 'Got expected number of records.');
+      after(++count);
+    })
+  });
+
+  cases.no_fields.stream.end(noFields);
+  cases.empty_fields.stream.end(emptyFields);
+  cases.spotty_fields.stream.write(nc);
+  cases.spotty_fields.stream.write(emptyFields);
+  cases.spotty_fields.stream.write(nc);
+  cases.spotty_fields.stream.write(nc);
+  cases.spotty_fields.stream.end(noFields);
+
+  function after(count){
+    if(count===3){
+      t.pass('Processed all files without error.');
+    }
+  }
 
 });
 
+
 test('retriever', function(t){
 
-  t.plan(31);
+  t.plan(27);
 
   retriever({quiet: true, profile: 'default', directory: '.', file: 'nofile'}, function(errs){
     t.equal(errs.length, 1, 'Errors on bad file and no bucket.');
@@ -136,16 +195,6 @@ test('retriever', function(t){
     t.equal(processedRecords.length, 2, 'Loads data after parent dir error.');
   });
 
-  retriever({match: 'maineerr, arkansaserr', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(errs, processedRecords){
-    t.equal(errs.length, 0, 'No error on filtered file.')
-    t.equal(processedRecords.length, 2, 'Loads data after filter.');
-  });
-
-  retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/parcelsjson.json'}, function(errs, processedRecords){
-    t.equal(errs.length, 0, 'No error on converted parcels.')
-    t.equal(processedRecords.length, 1, 'Loads data from parcels');
-  });
-
   spawn('./retriever.js', ['-b', 'wyatt-test', '-p', 'default', '-d', '.', '-f', maine])
     .on('exit', function(code){
       t.equal(code, 0, 'Loads via cli');
@@ -159,23 +208,69 @@ test('retriever', function(t){
 });
 
 test('Ensure output', function(t){
-  t.plan(8);
+  t.plan(10);
+  var count = 0;
 
-  var outfiles = [
-    {file: 'test/output/arkansas.csv.gz', osxhash: '2e50e44d42b2c1ab7aa22d3f1c704ee127298f409deb0a2fddbff49dfd5aebbe', ubuntuhash: '8b76792518342b0c557d5c948b8a282625936086ab7ddeaa394662dab120b1e6'},
-    {file: 'test/output/maine.csv.gz', osxhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb', ubuntuhash: 'aefe30bd7b08afb745a62aa87d0bb9f4d98734d958e25891e0ac4ef31397edfb'},
-    {file: 'test/output/north_carolina.csv.gz', osxhash: '94795e123dc028d643db2dba749816d17ad4b222b0d6686c44b4e406ad98bf56', ubuntuhash: '318ea9987f7f3e3208026ca589ccbd1076d6aa219c286068556d8f9fcbf0e324'},
-    {file: 'test/output/sacramento.csv.gz', osxhash: '486c0dba103103fbaa87e2a74a5457a724f0ed3f0af8b6c0bdef6254752a39c4', ubuntuhash: '5106df46f78f9a9af787d4c523cbfacf05dba746e1f7a9c62723dc8caa04acf2'}
-  ];
+ retriever({quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/parcelsjson.json'}, function(errs, processedRecords){
+    t.equal(errs.length, 0, 'No error on converted parcels.')
+    t.equal(processedRecords.length, 1, 'Loads data from parcels');
+    ensure(++count);
+  });
 
-  outfiles.forEach(function(obj){
-    var stream = fs.createReadStream(obj.file);
-    var hash = os.platform() === 'darwin' ? 'osxhash' : 'ubuntuhash';
+  retriever({match: 'maine, arkansas', quiet: true, profile: 'default', directory: 'test/output', file: 'test/data/maineandarkanderr.json'}, function(errs, processedRecords){
+    t.equal(errs.length, 0, 'No error on filtered file.')
+    t.equal(processedRecords.length, 2, 'Loads data after filter.');
+    ensure(++count);
+  });
 
-    checkHash(stream, obj[hash], function(hashIsEqual, computedHash){
-      t.ok(hashIsEqual, 'Computes proper hash');
-      t.equal(obj[hash], computedHash, 'Precomputed hash equals computed hash');
+  function ensure(count){
+    if(count < 2) return;
+
+    var outfiles = [
+      {file: 'test/output/arkansas.csv.gz', hash: '38af547a0147a0934f63bda7a4b6614e4b0bc4defca1ecd7eed9e4303fa7af59'},
+      {file: 'test/output/maine.csv.gz', hash: '1af6790085e15625392157c2187a6e6624eaa3c1d856ee8531fe1873fe7548e7'},
+      {file: 'test/output/sacramento.csv.gz', hash: '7f1be41d92041b0d5714fcb1f65a58d87efa3bb46681aa0c5160e7ff7701ae85'}
+    ];
+
+    outfiles.forEach(function(obj){
+      var stream = fs.createReadStream(obj.file);
+
+      checkHash(stream, obj.hash, function(hashIsEqual, computedHash){
+        t.ok(hashIsEqual, 'Computes proper hash');
+        t.equal(computedHash, obj.hash, 'Precomputed hash equals computed hash');
+      });
+
+    });
+  }
+});
+
+
+test('Field tests', function(t){
+  var data = fs.readJsonSync('data.json');
+  var fieldFiles = {};
+
+  t.plan(data.length*5);
+
+  fs.readdirSync('test/data/fields')
+    .filter(function(v){return v[0] !== '.'})
+    .forEach(function(v){fieldFiles[path.basename(v, '.json')] = fs.readJsonSync(path.join('test/data/fields', v))});
+
+  data.forEach(function(source){
+    var fieldStream = fieldFilter(source.fields);
+
+    var rawField = fieldFiles[source.name];
+
+    t.ok(rawField, util.format('A test record exists in test/data/fields for %s', source.name));
+
+    fieldStream.on('data', function(data){
+      var props = data.properties;
+      t.ok(props.Address, util.format('%s generates address', source.name));
+      t.ok(props.City, util.format('%s generates city', source.name));
+      t.ok(props.State, util.format('%s generates state', source.name));
+      t.ok(props.Zip, util.format('%s generates zip', source.name));
     });
 
+    fieldStream.end(fieldFiles[source.name]);
   });
+
 });

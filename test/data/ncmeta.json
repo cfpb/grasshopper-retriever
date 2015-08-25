@@ -1,19 +1,18 @@
-[
-  {
-    "name":"maine",
-    "url":"https://cfpb.github.io/grasshopper-retriever/maine.zip",
-    "hash":"7e047fa12e048ebed7e0b7cbd80621a39996666396e685a092ae30f5ea2ee79e",
-    "file":"maine.shp",
+{
+    "name": "north_carolina",
+    "url": "http://data.nconemap.gov/downloads/vector/mastadd14.zip",
+    "hash": "1b927688a387275c6b7767a94b46a3467731564c0265c6d3747ae7e80ea65257",
+    "file": "AddressNC_2014.gdb",
     "fields": [
       {
         "name": "Address",
         "type": "static",
-        "value": "ADDRESS"
+        "value": "FULL_ADDRESS"
       },
       {
         "name": "City",
         "type": "static",
-        "value": "MUNICIPALI"
+        "value": "PO_NAME"
       },
       {
         "name": "State",
@@ -27,4 +26,3 @@
       }
     ]
   }
-]
