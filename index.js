@@ -1,6 +1,7 @@
 var fs = require('fs-extra');
 var util = require('util');
 var path = require('path');
+var crypto = require('crypto');
 var url = require('url');
 var spawn = require('child_process').spawn;
 var winston = require('winston');
@@ -25,9 +26,20 @@ var comma = new Buffer(',');
 
 function retrieve(program, callback){
 
-  var errs = [];
-  var scratchSpace = 'scratch/' + Math.random()*1e17;
+  var output = {
+    errors: [],
+    fresh: [],
+    stale: [],
+    processed: [],
+    retrieved: [],
+    startTime: Date.now(),
+    endTime: null,
+    location: ''
+  };
+
+  var scratchSpace = 'scratch/' + crypto.pseudoRandomBytes(10).toString('hex');
   fs.mkdirsSync(scratchSpace);
+
 
   var logger = new winston.Logger({
     transports: [
@@ -41,27 +53,25 @@ function retrieve(program, callback){
 
 
   function wrappedCb(err){
-    if(err) errs.push(err);
+    if(err) output.errors.push(err);
 
     try{
       fs.removeSync(scratchSpace);
     }catch(e){
-      if(e) errs.push(e);
+      if(e) output.errors.push(e);
     }
 
-    if(errs.length){
-      logger.error('Encountered %d error%s whilst retrieving.', errs.length, errs.length > 1 ? 's' : '');
-      errs.forEach(function(v){
-        logger.error(v);
-      });
-      if(!callback) throw errs.join('\n');
-    }
+    output.endTime = Date.now();
 
-    if(callback) callback(errs, processedRecords);
+    if(output.errors.length && !callback) throw output.errors.join('\n');
+
+    if(callback) callback(output);
   }
+
 
   if(!program.file) return wrappedCb(new Error('Must provide a metadata file with the -f option.'));
 
+  var monitoringMode = !program.bucket && !program.directory;
   var stringMatch = typeof program.match === 'string';
   var regMatch = typeof program.match === 'object';
 
@@ -75,17 +85,17 @@ function retrieve(program, callback){
   }
 
   var recordCount = data.length;
-  var processedRecords = [];
 
   function recordCallback(err, record){
+    output.processed.push(record.name);
+
     if(err){
       logger.error(err);
-      errs.push(err);
-      recordCount--;
+      output.errors.push(err);
     }else{
-      processedRecords.push(record);
+      output.retrieved.push(record.name);
     }
-    if(processedRecords.length === recordCount) wrappedCb(null);
+    if(output.processed.length === recordCount) wrappedCb(null);
   }
 
 
@@ -95,14 +105,14 @@ function retrieve(program, callback){
 
     //Don't allow to traverse to other folders via data.json
     if(restrictedReg.test(record.name)){
-      return recordCallback(new Error(util.format('Invalid record name %s. Must not contain ".." or "/".', record.name)));
+      return recordCallback(new Error(util.format('Invalid record name %s. Must not contain ".." or "/".', record.name)), record);
     }
 
     //If the record is filtered, remove it from the count
     if(stringMatch && program.match.indexOf(record.name) === -1 ||
       regMatch && !program.match.test(record.name)
     ){
-      if(--recordCount === processedRecords.length){
+      if(--recordCount === output.processed.length){
         return wrappedCb(null);
       }
       return recordCount;
@@ -119,7 +129,7 @@ function retrieve(program, callback){
 
           if(err){
             ftpClient.end();
-            return recordCallback(err);
+            return recordCallback(err, record);
           }
 
           eos(stream, function(){
@@ -142,12 +152,20 @@ function retrieve(program, callback){
     checkHash(stream, record.hash, function(hashIsEqual, remoteHash){
       if(hashIsEqual){
         logger.info('Remote file for %s verified.', record.name);
+        record._retrieverVerified = 1;
+        output.fresh.push(record.name);
+
+        //if no output or stream has already completed
+        if(monitoringMode || record._retrieverProcessed) return recordCallback(null, record);
         return;
       }
+      output.stale.push(record.name);
       stream.emit('error', new Error('The hash from ' + record.name + ' did not match the downloaded file\'s hash.\nRecord hash: ' + record.hash +'\nRemote hash: ' + remoteHash +'\n'));
     });
 
     stream.on('error', handleStreamError.bind(stream, record));
+
+    if(monitoringMode) return;
 
     if(zipReg.test(record.url)){
       var zipdir = path.join(scratchSpace, record.name);
@@ -157,7 +175,7 @@ function retrieve(program, callback){
         if(err) return stream.emit('error', err);
 
         yauzl.open(zipfile, function(err, zip){
-          if(err) return recordCallback(err);
+          if(err) return recordCallback(err, record);
           var entriesFinished = 0;
           var count = 0;
 
@@ -174,7 +192,7 @@ function retrieve(program, callback){
               var output = fs.createOutputStream(path.join(zipdir, entry.fileName));
 
               pump(readStream, output, function(err){
-                if(err) return recordCallback(err);
+                if(err) return recordCallback(err, record);
                 count--;
                 if(entriesFinished && !count){
                   var unzipped = path.join(zipdir, record.file);
@@ -182,7 +200,7 @@ function retrieve(program, callback){
                   if(csvReg.test(record.file)){
 
                     csvToVrt(unzipped, record.sourceSrs, function(err, vrt){
-                      if(err) return recordCallback(err);
+                      if(err) return recordCallback(err, record);
                       handleStream(spawnOgr(vrt), record);
                     });
 
@@ -201,10 +219,10 @@ function retrieve(program, callback){
         var csvStream = fs.createWriteStream(csv);
 
         pump(stream, csvStream, function(err){
-          if(err) return recordCallback(err);
+          if(err) return recordCallback(err, record);
 
           csvToVrt(csv, record.sourceSrs, function(err, vrt){
-            if(err) return recordCallback(err);
+            if(err) return recordCallback(err, record);
             handleStream(spawnOgr(record, vrt), record);
           });
         });
@@ -220,16 +238,16 @@ function retrieve(program, callback){
     if(this.unpipe) this.unpipe();
     if(this.destroy) this.destroy();
     if(this.kill) this.kill();
-    if(record._output){
+    if(record._retrieverOutput){
       if(program.bucket){
-        record._output.abortUpload(function(err){
+        record._retrieverOutput.abortUpload(function(err){
           if(err) logger.error(err);
         });
       }else{
-        fs.removeSync(record._output);
+        fs.removeSync(record._retrieverOutput);
       }
     }
-    recordCallback(err);
+    recordCallback(err, record);
   }
 
 
@@ -273,11 +291,6 @@ function retrieve(program, callback){
 
 
   function handleStream(stream, record){
-    if(!program.bucket && !program.directory){
-      return eos(stream, function(err){
-        recordCallback(err);
-      });
-    }
 
     if(program.bucket && !program.directory){
       program.directory = '.';
@@ -289,14 +302,17 @@ function retrieve(program, callback){
 
     if(program.bucket){
       destStream = uploadStream.stream(endfile);
-      record._output = destStream;
+      record._retrieverOutput = destStream;
+      output.location = program.bucket + '/' + program.directory;
     }else{
       destStream = fs.createWriteStream(endfile);
-      record._output = endfile;
+      record._retrieverOutput = endfile;
+      output.location= program.directory;
     }
 
     pump(stream, zipStream, destStream, function(err){
-      recordCallback(err);
+      if(!err) record._retrieverProcessed = 1;
+      if(err||record._retrieverVerified) return recordCallback(err, record);
     });
   }
 
